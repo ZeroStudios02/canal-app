@@ -1,6 +1,5 @@
 const API = '';
 
-// Estado de la radio
 let songs = [];
 let shuffledOrder = [];
 let currentIndex = 0;
@@ -10,11 +9,9 @@ let synth = window.speechSynthesis;
 let voices = [];
 let currentUtterance = null;
 
-// Fecha de fin de temporada (tipo Fortnite) - 30 días desde ahora
 const SEASON_END = new Date();
 SEASON_END.setDate(SEASON_END.getDate() + 30);
 
-// Letras generadas dinámicamente
 function generateLyrics(title, artist) {
   const phrases = [
     `Sintoniza ${title}`,
@@ -31,42 +28,38 @@ function generateLyrics(title, artist) {
   return phrases.map((t, i) => ({ t: i * 8, text: t }));
 }
 
-// Cargar canciones
 async function loadSongs() {
   try {
     const res = await fetch(API + '/api/musica');
     songs = await res.json();
     if (songs.length > 0) {
-      shufflePlaylist();
+      shuffledOrder = [...songs].sort(() => Math.random() - 0.5);
+      currentIndex = 0;
     }
   } catch (e) {
     console.error('Error cargando canciones:', e);
   }
 }
 
-// Mezclar playlist
 function shufflePlaylist() {
   shuffledOrder = [...songs].sort(() => Math.random() - 0.5);
   currentIndex = 0;
 }
 
-// Iniciar radio (llamado al hacer clic en el botón)
 function startRadio() {
   if (songs.length === 0) return;
   playSong(currentIndex);
   audioStarted = true;
 }
 
-// Ocultar botón de reproducción
 function ocultarBotonPlay() {
   const btn = document.getElementById('btn-play-overlay');
   if (btn) {
     btn.style.opacity = '0';
-    setTimeout(() => btn.remove(), 600);
+    setTimeout(() => { if(btn.parentNode) btn.remove(); }, 600);
   }
 }
 
-// Reproducir canción
 function playSong(index) {
   if (index < 0 || index >= shuffledOrder.length) {
     shufflePlaylist();
@@ -175,7 +168,6 @@ function loadVoices() {
   voices = synth.getVoices();
 }
 
-// Contador tipo Fortnite
 function updateSeasonCounter() {
   const now = new Date().getTime();
   const diff = SEASON_END.getTime() - now;
@@ -203,7 +195,6 @@ function updateSeasonCounter() {
 setInterval(updateSeasonCounter, 1000);
 updateSeasonCounter();
 
-// Visualizador de audio
 function initVisualizer() {
   const canvas = document.getElementById('visualizer');
   const ctx = canvas.getContext('2d');
@@ -249,12 +240,10 @@ function initVisualizer() {
   animate();
 }
 
-// Eventos de voz
 window.speechSynthesis.onvoiceschanged = loadVoices;
 loadVoices();
 initVisualizer();
 
-// Cargar eventos
 async function cargarEventos() {
   try {
     const res = await fetch(API + '/api/eventos');
@@ -279,11 +268,9 @@ async function cargarEventos() {
   }
 }
 
-// Cargar todo al iniciar
 loadSongs();
 cargarEventos();
 
-// Evento del botón de reproducción
 document.getElementById('btn-play-overlay').addEventListener('click', () => {
   audio.muted = false;
   startRadio();
