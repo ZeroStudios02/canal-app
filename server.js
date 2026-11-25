@@ -1,5 +1,4 @@
 const express = require('express');
-const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
 
@@ -9,130 +8,123 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Base de datos SQLite
-const db = new Database(path.join(__dirname, 'canal.db'));
+// Archivos de datos JSON
+const DATA_DIR = path.join(__dirname, 'data');
+if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR);
 
-// Crear tablas
-db.exec(`
-  CREATE TABLE IF NOT EXISTS dibujos (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    titulo TEXT NOT NULL,
-    descripcion TEXT,
-    portada TEXT,
-    creado_en TEXT DEFAULT (datetime('now'))
-  );
+const leer = (archivo) => {
+  try {
+    return JSON.parse(fs.readFileSync(path.join(DATA_DIR, archivo), 'utf8'));
+  } catch { return []; };
+};
+const escribir = (archivo, datos) => {
+  fs.writeFileSync(path.join(DATA_DIR, archivo), JSON.stringify(datos, null, 2));
+};
 
-  CREATE TABLE IF NOT EXISTS episodios (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    dibujo_id INTEGER NOT NULL,
-    titulo TEXT NOT NULL,
-    numero INTEGER,
-    video_url TEXT NOT NULL,
-    duracion TEXT,
-    creado_en TEXT DEFAULT (datetime('now')),
-    FOREIGN KEY (dibujo_id) REFERENCES dibujos(id) ON DELETE CASCADE
-  );
+// Inicializar archivos vacíos si no existen
+['dibujos.json', 'episodios.json', 'musica.json', 'eventos.json'].forEach(f => {
+  if (!fs.existsSync(path.join(DATA_DIR, f))) escribir(f, []);
+});
 
-  CREATE TABLE IF NOT EXISTS musica (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    titulo TEXT NOT NULL,
-    artista TEXT,
-    album TEXT,
-    audio_url TEXT NOT NULL,
-    portada TEXT,
-    creado_en TEXT DEFAULT (datetime('now'))
-  );
-
-  CREATE TABLE IF NOT EXISTS eventos (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    titulo TEXT NOT NULL,
-    descripcion TEXT,
-    fecha TEXT NOT NULL,
-    imagen TEXT,
-    creado_en TEXT DEFAULT (datetime('now'))
-  );
-`);
-
-// Datos de ejemplo (solo si las tablas están vacías)
-const contar = (tabla) => db.prepare(`SELECT COUNT(*) as c FROM ${tabla}`).get().c;
-
-if (contar('dibujos') === 0) {
-  const insDibujo = db.prepare('INSERT INTO dibujos (titulo, descripcion, portada) VALUES (?, ?, ?)');
-  const insEpisodio = db.prepare('INSERT INTO episodios (dibujo_id, titulo, numero, video_url, duracion) VALUES (?, ?, ?, ?, ?)');
-
-  const d1 = insDibujo.run('Aventuras en el Bosque', 'Una serie sobre animales que viven en un bosque mágico.', '/img/placeholder-dibujo.jpg');
-  insEpisodio.run(d1.lastInsertRowid, 'El tesoro escondido', 1, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', '10:30');
-  insEpisodio.run(d1.lastInsertRowid, 'La gran carrera', 2, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', '11:15');
-
-  const d2 = insDibujo.run('El Robot Amigo', 'Un robot que aprende a ser humano.', '/img/placeholder-dibujo.jpg');
-  insEpisodio.run(d2.lastInsertRowid, 'Primer día de escuela', 1, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', '12:00');
-}
-
-// ========== RUTAS: DIBUJOS ==========
+// ========== DIBUJOS ==========
 app.get('/api/dibujos', (req, res) => {
-  const dibujos = db.prepare('SELECT * FROM dibujos ORDER BY creado_en DESC').all();
-  res.json(dibujos);
+  res.json(leer('dibujos.json'));
 });
 
 app.get('/api/dibujos/:id/episodios', (req, res) => {
-  const episodios = db.prepare('SELECT * FROM episodios WHERE dibujo_id = ? ORDER BY numero').all(req.params.id);
-  res.json(episodios);
+  const eps = leer('episodios.json').filter(e => e.dibujo_id === parseInt(req.params.id));
+  eps.sort((a, b) => (a.numero || 0) - (b.numero || 0));
+  res.json(eps);
 });
 
 app.post('/api/dibujos', (req, res) => {
   const { titulo, descripcion, portada } = req.body;
   if (!titulo) return res.status(400).json({ error: 'Título requerido' });
-  const info = db.prepare('INSERT INTO dibujos (titulo, descripcion, portada) VALUES (?, ?, ?)').run(titulo, descripcion || '', portada || '');
-  res.json({ id: info.lastInsertRowid });
+  const dibujos = leer('dibujos.json');
+  const id = Date.now();
+  const nuevo = { id, titulo, descripcion: descripcion || '', portada: portada || '', creado_en: new Date().toISOString() };
+  dibujos.push(nuevo);
+  escribir('dibujos.json', dibujos);
+  res.json(nuevo);
 });
 
 app.delete('/api/dibujos/:id', (req, res) => {
-  db.prepare('DELETE FROM dibujos WHERE id = ?').run(req.params.id);
+  const id = parseInt(req.params.id);
+  let dibujos = leer('dibujos.json').filter(d => d.id !== id);
+  escribir('dibujos.json', dibujos);
+  let episodios = leer('episodios.json').filter(e => e.dibujo_id !== id);
+  escribir('episodios.json', episodios);
   res.json({ ok: true });
 });
 
-// ========== RUTAS: MÚSICA ==========
+app.post('/api/episodios', (req, res) => {
+  const { dibujo_id, titulo, numero, video_url, duracion } = req.body;
+  if (!dibujo_id || !titulo || !video_url) return res.status(400).json({ error: 'Faltan campos' });
+  const episodios = leer('episodios.json');
+  const id = Date.now();
+  const nuevo = { id, dibujo_id: parseInt(dibujo_id), titulo, numero: parseInt(numero) || 0, video_url, duracion: duracion || '', creado_en: new Date().toISOString() };
+  episodios.push(nuevo);
+  escribir('episodios.json', episodios);
+  res.json(nuevo);
+});
+
+app.delete('/api/episodios/:id', (req, res) => {
+  const id = parseInt(req.params.id);
+  let episodios = leer('episodios.json').filter(e => e.id !== id);
+  escribir('episodios.json', episodios);
+  res.json({ ok: true });
+});
+
+// ========== MÚSICA ==========
 app.get('/api/musica', (req, res) => {
-  const canciones = db.prepare('SELECT * FROM musica ORDER BY creado_en DESC').all();
-  res.json(canciones);
+  res.json(leer('musica.json'));
 });
 
 app.post('/api/musica', (req, res) => {
   const { titulo, artista, album, audio_url, portada } = req.body;
   if (!titulo || !audio_url) return res.status(400).json({ error: 'Título y audio_url requeridos' });
-  const info = db.prepare('INSERT INTO musica (titulo, artista, album, audio_url, portada) VALUES (?, ?, ?, ?, ?)').run(titulo, artista || '', album || '', audio_url, portada || '');
-  res.json({ id: info.lastInsertRowid });
+  const musica = leer('musica.json');
+  const id = Date.now();
+  const nuevo = { id, titulo, artista: artista || '', album: album || '', audio_url, portada: portada || '', creado_en: new Date().toISOString() };
+  musica.push(nuevo);
+  escribir('musica.json', musica);
+  res.json(nuevo);
 });
 
 app.delete('/api/musica/:id', (req, res) => {
-  db.prepare('DELETE FROM musica WHERE id = ?').run(req.params.id);
+  const id = parseInt(req.params.id);
+  let musica = leer('musica.json').filter(m => m.id !== id);
+  escribir('musica.json', musica);
   res.json({ ok: true });
 });
 
-// ========== RUTAS: EVENTOS ==========
+// ========== EVENTOS ==========
 app.get('/api/eventos', (req, res) => {
-  const eventos = db.prepare('SELECT * FROM eventos ORDER BY fecha ASC').all();
-  res.json(eventos);
+  res.json(leer('eventos.json'));
 });
 
 app.post('/api/eventos', (req, res) => {
   const { titulo, descripcion, fecha, imagen } = req.body;
   if (!titulo || !fecha) return res.status(400).json({ error: 'Título y fecha requeridos' });
-  const info = db.prepare('INSERT INTO eventos (titulo, descripcion, fecha, imagen) VALUES (?, ?, ?, ?)').run(titulo, descripcion || '', fecha, imagen || '');
-  res.json({ id: info.lastInsertRowid });
+  const eventos = leer('eventos.json');
+  const id = Date.now();
+  const nuevo = { id, titulo, descripcion: descripcion || '', fecha, imagen: imagen || '', creado_en: new Date().toISOString() };
+  eventos.push(nuevo);
+  escribir('eventos.json', eventos);
+  res.json(nuevo);
 });
 
 app.delete('/api/eventos/:id', (req, res) => {
-  db.prepare('DELETE FROM eventos WHERE id = ?').run(req.params.id);
+  const id = parseInt(req.params.id);
+  let eventos = leer('eventos.json').filter(e => e.id !== id);
+  escribir('eventos.json', eventos);
   res.json({ ok: true });
 });
 
-// Health check
 app.get('/api/health', (req, res) => {
   res.json({ ok: true, app: 'canal-app' });
 });
 
-// Ruta fallback para SPA
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
