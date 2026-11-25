@@ -3,100 +3,45 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Canal App · Dibujos, Música, Eventos</title>
+  <title>Canal App · Música y Eventos</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header>
-    <h1>📺 Canal App</h1>
-    <p>Tu plataforma de dibujos, música y eventos</p>
+
+  <!-- Canvas de fondo animado -->
+  <canvas id="bgCanvas" class="bg-canvas"></canvas>
+
+  <header class="header">
+    <div class="logo">▶️ CANAL<span>APP</span></div>
+    <div class="user">👤 Invitado</div>
   </header>
 
-  <nav>
-    <button class="tab-btn active" data-tab="dibujos">🎬 Dibujos</button>
-    <button class="tab-btn" data-tab="musica">🎵 Música</button>
-    <button class="tab-btn" data-tab="eventos">📅 Eventos</button>
+  <nav class="tabs">
+    <button class="tab active" data-tab="musica">🎵 Música</button>
+    <button class="tab" data-tab="eventos">📅 Eventos</button>
   </nav>
 
-  <main>
-    <!-- Pestaña Dibujos -->
-    <section id="tab-dibujos" class="tab-panel active">
-      <div class="toolbar">
-        <h2>Dibujos Animados</h2>
-        <button class="btn-add" onclick="abrirModalDibujo()">+ Añadir dibujo</button>
-      </div>
-      <div id="lista-dibujos" class="grid"></div>
-    </section>
-
-    <!-- Pestaña Música -->
-    <section id="tab-musica" class="tab-panel">
-      <div class="toolbar">
+  <main class="container">
+    <section id="tab-musica" class="tab-panel active">
+      <div class="section-header">
         <h2>Música</h2>
-        <button class="btn-add" onclick="abrirModalMusica()">+ Añadir canción</button>
+        <p class="subtitle">Tu biblioteca de sonido</p>
       </div>
-      <div id="lista-musica" class="grid"></div>
+      <div id="lista-musica" class="music-list"></div>
     </section>
 
-    <!-- Pestaña Eventos -->
     <section id="tab-eventos" class="tab-panel">
-      <div class="toolbar">
+      <div class="section-header">
         <h2>Eventos</h2>
-        <button class="btn-add" onclick="abrirModalEvento()">+ Añadir evento</button>
+        <p class="subtitle">Próximos estrenos y actividades</p>
       </div>
-      <div id="lista-eventos" class="grid"></div>
+      <div id="lista-eventos" class="events-list"></div>
     </section>
   </main>
 
-  <!-- Modales -->
-  <div id="modal-dibujo" class="modal">
-    <div class="modal-content">
-      <h3>Añadir Dibujo</h3>
-      <form id="form-dibujo">
-        <input type="text" id="dibujo-titulo" placeholder="Título" required>
-        <input type="text" id="dibujo-desc" placeholder="Descripción">
-        <input type="text" id="dibujo-portada" placeholder="URL de la portada">
-        <button type="submit">Guardar</button>
-        <button type="button" onclick="cerrarModal('modal-dibujo')">Cancelar</button>
-      </form>
-    </div>
-  </div>
-
-  <div id="modal-musica" class="modal">
-    <div class="modal-content">
-      <h3>Añadir Canción</h3>
-      <form id="form-musica">
-        <input type="text" id="musica-titulo" placeholder="Título" required>
-        <input type="text" id="musica-artista" placeholder="Artista">
-        <input type="text" id="musica-audio" placeholder="URL de audio (mp3, etc.)" required>
-        <input type="text" id="musica-portada" placeholder="URL de la portada">
-        <button type="submit">Guardar</button>
-        <button type="button" onclick="cerrarModal('modal-musica')">Cancelar</button>
-      </form>
-    </div>
-  </div>
-
-  <div id="modal-evento" class="modal">
-    <div class="modal-content">
-      <h3>Añadir Evento</h3>
-      <form id="form-evento">
-        <input type="text" id="evento-titulo" placeholder="Título del evento" required>
-        <input type="text" id="evento-desc" placeholder="Descripción">
-        <input type="datetime-local" id="evento-fecha" required>
-        <input type="text" id="evento-imagen" placeholder="URL de imagen">
-        <button type="submit">Guardar</button>
-        <button type="button" onclick="cerrarModal('modal-evento')">Cancelar</button>
-      </form>
-    </div>
-  </div>
-
-  <!-- Modal detalle dibujo (episodios) -->
-  <div id="modal-detalle" class="modal">
-    <div class="modal-content">
-      <h3 id="detalle-titulo"></h3>
-      <div id="detalle-episodios"></div>
-      <button onclick="cerrarModal('modal-detalle')">Cerrar</button>
-    </div>
-  </div>
+  <footer class="footer">
+    <p>⚠️ Sube solo contenido que tengas derechos de compartir.</p>
+  </footer>
 
   <script src="app.js"></script>
 </body>

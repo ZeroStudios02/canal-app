@@ -1,9 +1,9 @@
 const API = '';
 
 // Navegación entre pestañas
-document.querySelectorAll('.tab-btn').forEach(btn => {
+document.querySelectorAll('.tab').forEach(btn => {
   btn.addEventListener('click', () => {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
     btn.classList.add('active');
     document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
@@ -13,36 +13,22 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 
 // Cargar datos de una pestaña
 async function cargarTabla(tab) {
-  if (tab === 'dibujos') {
-    const res = await fetch(API + '/api/dibujos');
-    const dibujos = await res.json();
-    const cont = document.getElementById('lista-dibujos');
-    cont.innerHTML = '';
-    if (dibujos.length === 0) { cont.innerHTML = '<div class="empty">Sin dibujos aún.</div>'; return; }
-    dibujos.forEach(d => {
-      cont.innerHTML += `
-        <div class="card">
-          <img src="${d.portada || 'https://via.placeholder.com/300x180?text=Sin+imagen'}" alt="${d.titulo}">
-          <h3>${d.titulo}</h3>
-          <p>${d.descripcion || 'Sin descripción'}</p>
-          <button onclick="verEpisodios(${d.id}, '${d.titulo}')" class="btn-add" style="width:100%;background:#475569;">Ver episodios</button>
-          <button class="btn-delete" onclick="borrarDibujo(${d.id})">Eliminar</button>
-        </div>`;
-    });
-  } else if (tab === 'musica') {
+  if (tab === 'musica') {
     const res = await fetch(API + '/api/musica');
     const canciones = await res.json();
     const cont = document.getElementById('lista-musica');
     cont.innerHTML = '';
-    if (canciones.length === 0) { cont.innerHTML = '<div class="empty">Sin canciones aún.</div>'; return; }
+    if (canciones.length === 0) {
+      cont.innerHTML = '<div class="empty">Sin canciones aún. Añade tu primera música.</div>';
+      return;
+    }
     canciones.forEach(c => {
       cont.innerHTML += `
-        <div class="card">
-          <img src="${c.portada || 'https://via.placeholder.com/300x180?text=Sin+imagen'}" alt="${c.titulo}">
+        <div class="music-card">
+          <div class="music-art">${c.titulo.charAt(0).toUpperCase()}</div>
           <h3>${c.titulo}</h3>
-          <p>${c.artista || 'Artista desconocido'} ${c.album ? '· ' + c.album : ''}</p>
+          <span class="music-artist">${c.artista || 'Artista desconocido'} ${c.album ? '· ' + c.album : ''}</span>
           <audio controls src="${c.audio_url}" style="width:100%;margin-top:0.5rem;"></audio>
-          <button class="btn-delete" onclick="borrarMusica(${c.id})">Eliminar</button>
         </div>`;
     });
   } else if (tab === 'eventos') {
@@ -50,126 +36,90 @@ async function cargarTabla(tab) {
     const eventos = await res.json();
     const cont = document.getElementById('lista-eventos');
     cont.innerHTML = '';
-    if (eventos.length === 0) { cont.innerHTML = '<div class="empty">Sin eventos aún.</div>'; return; }
+    if (eventos.length === 0) {
+      cont.innerHTML = '<div class="empty">Sin eventos aún. Añade tu primer evento.</div>';
+      return;
+    }
     eventos.forEach(e => {
+      const fecha = new Date(e.fecha);
       cont.innerHTML += `
-        <div class="card">
-          ${e.imagen ? `<img src="${e.imagen}" alt="${e.titulo}">` : ''}
-          <h3>${e.titulo}</h3>
-          <p>${e.descripcion || 'Sin descripción'}</p>
-          <span>📅 ${new Date(e.fecha).toLocaleString('es-ES')}</span>
-          <button class="btn-delete" onclick="borrarEvento(${e.id})">Eliminar</button>
+        <div class="event-card">
+          <div class="event-date">
+            <div class="day">${fecha.getDate()}</div>
+            <div class="month">${fecha.toLocaleString('es-ES', { month: 'short' })}</div>
+          </div>
+          <div class="event-info">
+            <h3>${e.titulo}</h3>
+            <p>${e.descripcion || 'Sin descripción'}</p>
+            <span class="time">📅 ${fecha.toLocaleString('es-ES')}</span>
+          </div>
         </div>`;
     });
   }
 }
-
-// Ver episodios de un dibujo
-async function verEpisodios(id, titulo) {
-  const res = await fetch(API + '/api/dibujos/' + id + '/episodios');
-  const eps = await res.json();
-  document.getElementById('detalle-titulo').textContent = titulo;
-  const cont = document.getElementById('detalle-episodios');
-  cont.innerHTML = '';
-  if (eps.length === 0) { cont.innerHTML = '<p>Sin episodios.</p>'; }
-  else {
-    eps.forEach(e => {
-      cont.innerHTML += `
-        <div class="episode">
-          <strong>${e.numero ? 'Episodio ' + e.numero + ' · ' : ''}${e.titulo}</strong>
-          <span>${e.duracion || ''}</span>
-          <button onclick="abrirVideo('${e.video_url}')" class="btn-add" style="width:100%;background:#475569;margin-top:0.5rem;">Reproducir</button>
-        </div>`;
-    });
-  }
-  document.getElementById('modal-detalle').classList.add('active');
-}
-
-function abrirVideo(url) {
-  window.open(url, '_blank');
-}
-
-// Modal genérico
-function abrirModal(id) { document.getElementById(id).classList.add('active'); }
-function cerrarModal(id) { document.getElementById(id).classList.remove('active'); }
-
-// Formularios
-document.getElementById('form-dibujo').onsubmit = async (e) => {
-  e.preventDefault();
-  await fetch(API + '/api/dibujos', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({
-      titulo: document.getElementById('dibujo-titulo').value,
-      descripcion: document.getElementById('dibujo-desc').value,
-      portada: document.getElementById('dibujo-portada').value
-    })
-  });
-  cerrarModal('modal-dibujo');
-  e.target.reset();
-  cargarTabla('dibujos');
-};
-
-document.getElementById('form-musica').onsubmit = async (e) => {
-  e.preventDefault();
-  await fetch(API + '/api/musica', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({
-      titulo: document.getElementById('musica-titulo').value,
-      artista: document.getElementById('musica-artista').value,
-      audio_url: document.getElementById('musica-audio').value,
-      portada: document.getElementById('musica-portada').value
-    })
-  });
-  cerrarModal('modal-musica');
-  e.target.reset();
-  cargarTabla('musica');
-};
-
-document.getElementById('form-evento').onsubmit = async (e) => {
-  e.preventDefault();
-  await fetch(API + '/api/eventos', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({
-      titulo: document.getElementById('evento-titulo').value,
-      descripcion: document.getElementById('evento-desc').value,
-      fecha: document.getElementById('evento-fecha').value,
-      imagen: document.getElementById('evento-imagen').value
-    })
-  });
-  cerrarModal('modal-evento');
-  e.target.reset();
-  cargarTabla('eventos');
-};
-
-// Borrar
-async function borrarDibujo(id) {
-  if (!confirm('¿Eliminar este dibujo y sus episodios?')) return;
-  await fetch(API + '/api/dibujos/' + id, { method: 'DELETE' });
-  cargarTabla('dibujos');
-}
-async function borrarMusica(id) {
-  if (!confirm('¿Eliminar esta canción?')) return;
-  await fetch(API + '/api/musica/' + id, { method: 'DELETE' });
-  cargarTabla('musica');
-}
-async function borrarEvento(id) {
-  if (!confirm('¿Eliminar este evento?')) return;
-  await fetch(API + '/api/eventos/' + id, { method: 'DELETE' });
-  cargarTabla('eventos');
-}
-
-// Abrir modales específicos
-function abrirModalDibujo() { abrirModal('modal-dibujo'); }
-function abrirModalMusica() { abrirModal('modal-musica'); }
-function abrirModalEvento() { abrirModal('modal-evento'); }
-
-// Cerrar modal al hacer clic fuera
-document.querySelectorAll('.modal').forEach(m => {
-  m.addEventListener('click', (e) => { if (e.target === m) m.classList.remove('active'); });
-});
 
 // Cargar pestaña inicial
-cargarTabla('dibujos');
+cargarTabla('musica');
+
+// Canvas animado de fondo (partículas)
+const canvas = document.getElementById('bgCanvas');
+const ctx = canvas.getContext('2d');
+let width, height, particles = [];
+
+function resize() {
+  width = canvas.width = window.innerWidth;
+  height = canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resize);
+resize();
+
+class Particle {
+  constructor() {
+    this.x = Math.random() * width;
+    this.y = Math.random() * height;
+    this.vx = (Math.random() - 0.5) * 0.5;
+    this.vy = (Math.random() - 0.5) * 0.5;
+    this.size = Math.random() * 2 + 1;
+    this.color = Math.random() > 0.5 ? '#00f2ff' : '#7000ff';
+    this.alpha = Math.random() * 0.5 + 0.1;
+  }
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    if (this.x < 0 || this.x > width) this.vx *= -1;
+    if (this.y < 0 || this.y > height) this.vy *= -1;
+  }
+  draw() {
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+    ctx.fillStyle = this.color;
+    ctx.globalAlpha = this.alpha;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+}
+
+for (let i = 0; i < 40; i++) particles.push(new Particle());
+
+function animate() {
+  ctx.clearRect(0, 0, width, height);
+  particles.forEach(p => { p.update(); p.draw(); });
+  // Líneas entre partículas cercanas
+  for (let i = 0; i < particles.length; i++) {
+    for (let j = i + 1; j < particles.length; j++) {
+      const dx = particles[i].x - particles[j].x;
+      const dy = particles[i].y - particles[j].y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      if (dist < 150) {
+        ctx.beginPath();
+        ctx.moveTo(particles[i].x, particles[i].y);
+        ctx.lineTo(particles[j].x, particles[j].y);
+        ctx.strokeStyle = 'rgba(0, 242, 255, 0.1)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+    }
+  }
+  requestAnimationFrame(animate);
+}
+animate();
