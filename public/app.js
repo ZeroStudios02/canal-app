@@ -51,7 +51,7 @@ function shufflePlaylist() {
   currentIndex = 0;
 }
 
-// Iniciar radio
+// Iniciar radio (intento autoplay sin clic usando muted)
 function startRadio() {
   if (songs.length === 0) return;
   playSong(currentIndex);
@@ -93,16 +93,27 @@ function playSong(index) {
   audio.src = song.audio_url;
   audio.crossOrigin = 'anonymous';
 
+  // Técnica: empezar muted para permitir autoplay en navegadores
+  audio.muted = true;
+
   const playPromise = audio.play();
   if (playPromise !== undefined) {
-    playPromise.catch(err => {
-      console.warn('Autoplay bloqueado:', err);
-      document.getElementById('song-lyric').textContent = 'Haz clic para iniciar la transmisión';
-      document.body.addEventListener('click', () => {
-        audio.play();
-        audioStarted = true;
-      }, { once: true });
-    });
+    playPromise
+      .then(() => {
+        // Si el navegador permite autoplay, desmutear después de un breve delay
+        setTimeout(() => {
+          audio.muted = false;
+        }, 500);
+      })
+      .catch(err => {
+        console.warn('Autoplay bloqueado:', err);
+        document.getElementById('song-lyric').textContent = 'Haz clic para iniciar la transmisión';
+        document.body.addEventListener('click', () => {
+          audio.muted = false;
+          audio.play();
+          audioStarted = true;
+        }, { once: true });
+      });
   }
 
   const lyrics = generateLyrics(song.titulo, song.artista);
