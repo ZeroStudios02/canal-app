@@ -55,7 +55,7 @@ html, body {
   white-space: pre-wrap;
 }
 
-/* Header radio */
+/* Header */
 .radio-header {
   position: fixed;
   top: 0; left: 0; right: 0;
@@ -339,7 +339,7 @@ html, body {
   color: var(--muted);
 }
 
-/* Contador tipo Fortnite */
+/* Contador tipo Fortnite (separado de la radio) */
 .season-counter {
   display: flex;
   justify-content: center;

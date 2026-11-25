@@ -1,5 +1,6 @@
 const API = '';
 
+// ==================== RADIO ====================
 let songs = [];
 let shuffledOrder = [];
 let currentIndex = 0;
@@ -8,9 +9,6 @@ let audioStarted = false;
 let synth = window.speechSynthesis;
 let voices = [];
 let currentUtterance = null;
-
-const SEASON_END = new Date();
-SEASON_END.setDate(SEASON_END.getDate() + 30);
 
 function generateLyrics(title, artist) {
   const phrases = [
@@ -41,11 +39,6 @@ async function loadSongs() {
   }
 }
 
-function shufflePlaylist() {
-  shuffledOrder = [...songs].sort(() => Math.random() - 0.5);
-  currentIndex = 0;
-}
-
 function startRadio() {
   if (songs.length === 0) return;
   playSong(currentIndex);
@@ -54,15 +47,15 @@ function startRadio() {
 
 function ocultarBotonPlay() {
   const btn = document.getElementById('btn-play-overlay');
-  if (btn) {
+  if (btn && btn.parentNode) {
     btn.style.opacity = '0';
-    setTimeout(() => { if(btn.parentNode) btn.remove(); }, 600);
+    setTimeout(() => btn.parentNode.removeChild(btn), 600);
   }
 }
 
 function playSong(index) {
   if (index < 0 || index >= shuffledOrder.length) {
-    shufflePlaylist();
+    shuffledOrder = [...songs].sort(() => Math.random() - 0.5);
     index = 0;
   }
   currentIndex = index;
@@ -132,14 +125,14 @@ function playSong(index) {
   audio.ontimeupdate = () => { updateLyric(); updateProgress(); };
 
   audio.onended = () => {
-    disk.classList.remove('spinning');
+    document.getElementById('np-disk').classList.remove('spinning');
     speak('Siguiente canción en Canal Stream Radio');
     playSong(currentIndex + 1);
   };
 
   audio.onerror = () => {
     console.warn('Error cargando canción, pasando a la siguiente...');
-    disk.classList.remove('spinning');
+    document.getElementById('np-disk').classList.remove('spinning');
     setTimeout(() => playSong(currentIndex + 1), 2000);
   };
 }
@@ -167,33 +160,6 @@ function speak(text) {
 function loadVoices() {
   voices = synth.getVoices();
 }
-
-function updateSeasonCounter() {
-  const now = new Date().getTime();
-  const diff = SEASON_END.getTime() - now;
-
-  if (diff <= 0) {
-    document.getElementById('season-status').textContent = '¡La temporada ha terminado!';
-    document.getElementById('counter-days').textContent = '00';
-    document.getElementById('counter-hours').textContent = '00';
-    document.getElementById('counter-minutes').textContent = '00';
-    document.getElementById('counter-seconds').textContent = '00';
-    return;
-  }
-
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-  const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
-  document.getElementById('counter-days').textContent = String(days).padStart(2, '0');
-  document.getElementById('counter-hours').textContent = String(hours).padStart(2, '0');
-  document.getElementById('counter-minutes').textContent = String(minutes).padStart(2, '0');
-  document.getElementById('counter-seconds').textContent = String(seconds).padStart(2, '0');
-}
-
-setInterval(updateSeasonCounter, 1000);
-updateSeasonCounter();
 
 function initVisualizer() {
   const canvas = document.getElementById('visualizer');
@@ -268,6 +234,38 @@ async function cargarEventos() {
   }
 }
 
+// ==================== CONTADOR (separado de la radio) ====================
+const SEASON_END = new Date();
+SEASON_END.setDate(SEASON_END.getDate() + 30);
+
+function updateSeasonCounter() {
+  const now = new Date().getTime();
+  const diff = SEASON_END.getTime() - now;
+
+  if (diff <= 0) {
+    document.getElementById('season-status').textContent = '¡La temporada ha terminado!';
+    document.getElementById('counter-days').textContent = '00';
+    document.getElementById('counter-hours').textContent = '00';
+    document.getElementById('counter-minutes').textContent = '00';
+    document.getElementById('counter-seconds').textContent = '00';
+    return;
+  }
+
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+  document.getElementById('counter-days').textContent = String(days).padStart(2, '0');
+  document.getElementById('counter-hours').textContent = String(hours).padStart(2, '0');
+  document.getElementById('counter-minutes').textContent = String(minutes).padStart(2, '0');
+  document.getElementById('counter-seconds').textContent = String(seconds).padStart(2, '0');
+}
+
+setInterval(updateSeasonCounter, 1000);
+updateSeasonCounter();
+
+// ==================== INICIALIZACIÓN ====================
 loadSongs();
 cargarEventos();
 
