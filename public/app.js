@@ -38,7 +38,7 @@ async function loadSongs() {
     songs = await res.json();
     if (songs.length > 0) {
       shufflePlaylist();
-      startRadio();
+      mostrarBotonPlay();
     }
   } catch (e) {
     console.error('Error cargando canciones:', e);
@@ -51,7 +51,32 @@ function shufflePlaylist() {
   currentIndex = 0;
 }
 
-// Iniciar radio (intento autoplay sin clic usando muted)
+// Mostrar botón de reproducción
+function mostrarBotonPlay() {
+  const container = document.querySelector('.radio-player');
+  if (document.getElementById('btn-play-overlay')) return;
+
+  const overlay = document.createElement('div');
+  overlay.id = 'btn-play-overlay';
+  overlay.className = 'btn-play-overlay';
+  overlay.innerHTML = `
+    <div class="btn-play-content">
+      <div class="btn-play-icon">▶️</div>
+      <div class="btn-play-text">REPRODUCIR RADIO</div>
+      <div class="btn-play-sub">Haz clic para iniciar la transmisión en vivo</div>
+    </div>
+  `;
+  container.appendChild(overlay);
+
+  overlay.addEventListener('click', () => {
+    audio.muted = false;
+    startRadio();
+    overlay.style.opacity = '0';
+    setTimeout(() => overlay.remove(), 500);
+  });
+}
+
+// Iniciar radio
 function startRadio() {
   if (songs.length === 0) return;
   playSong(currentIndex);
@@ -92,28 +117,14 @@ function playSong(index) {
 
   audio.src = song.audio_url;
   audio.crossOrigin = 'anonymous';
-
-  // Técnica: empezar muted para permitir autoplay en navegadores
-  audio.muted = true;
+  audio.muted = false;
 
   const playPromise = audio.play();
   if (playPromise !== undefined) {
-    playPromise
-      .then(() => {
-        // Si el navegador permite autoplay, desmutear después de un breve delay
-        setTimeout(() => {
-          audio.muted = false;
-        }, 500);
-      })
-      .catch(err => {
-        console.warn('Autoplay bloqueado:', err);
-        document.getElementById('song-lyric').textContent = 'Haz clic para iniciar la transmisión';
-        document.body.addEventListener('click', () => {
-          audio.muted = false;
-          audio.play();
-          audioStarted = true;
-        }, { once: true });
-      });
+    playPromise.catch(err => {
+      console.warn('Error reproduciendo:', err);
+      document.getElementById('song-lyric').textContent = 'Error de reproducción. Intenta de nuevo.';
+    });
   }
 
   const lyrics = generateLyrics(song.titulo, song.artista);
