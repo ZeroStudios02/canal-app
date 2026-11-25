@@ -3,44 +3,112 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Canal App · Música y Eventos</title>
+  <title>Canal Stream · Radio y Eventos</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <!-- Canvas de fondo animado -->
-  <canvas id="bgCanvas" class="bg-canvas"></canvas>
+  <!-- Overlay de letra de fondo -->
+  <div id="lyric-overlay" class="lyric-overlay">
+    <div id="lyric-text" class="lyric-text">Canal Stream Radio</div>
+  </div>
 
-  <header class="header">
-    <div class="logo">▶️ CANAL<span>APP</span></div>
-    <div class="user">👤 Invitado</div>
+  <!-- Netflix-style header -->
+  <header class="netflix-header">
+    <div class="netflix-logo">▶️ CANAL<span>STREAM</span></div>
+    <div class="netflix-user">👤 Invitado</div>
   </header>
 
-  <nav class="tabs">
-    <button class="tab active" data-tab="musica">🎵 Música</button>
-    <button class="tab" data-tab="eventos">📅 Eventos</button>
+  <!-- Barra lateral estilo Netflix -->
+  <nav class="netflix-sidebar">
+    <div class="sidebar-item active" data-tab="radio">
+      <div class="sidebar-icon">📻</div>
+      <div class="sidebar-label">Radio en Vivo</div>
+    </div>
+    <div class="sidebar-item" data-tab="eventos">
+      <div class="sidebar-icon">📅</div>
+      <div class="sidebar-label">Eventos</div>
+    </div>
   </nav>
 
-  <main class="container">
-    <section id="tab-musica" class="tab-panel active">
-      <div class="section-header">
-        <h2>Música</h2>
-        <p class="subtitle">Tu biblioteca de sonido</p>
+  <!-- Contenido principal -->
+  <main class="netflix-main">
+    <!-- RADIO / NETFLIX PLAYER -->
+    <section id="tab-radio" class="netflix-panel active">
+      
+      <!-- Encabezado de la radio -->
+      <div class="radio-header">
+        <div class="live-indicator">
+          <div class="live-dot"></div>
+          <span>EN VIVO · CANAL STREAM RADIO</span>
+        </div>
+        <div class="freq">98.7 FM</div>
       </div>
-      <div id="lista-musica" class="music-list"></div>
+
+      <!-- Reproductor estilo Netflix (gran, central) -->
+      <div class="netflix-player">
+        <!-- Fondo con letra -->
+        <div class="player-bg" id="player-bg">
+          <div class="bg-gradient"></div>
+          <div id="lyric-bg" class="lyric-bg"></div>
+        </div>
+
+        <!-- Contenido del player -->
+        <div class="player-content">
+          <div class="now-playing-badge">AHORA</div>
+          <h1 class="song-title" id="song-title">Canal Stream Radio</h1>
+          <h2 class="song-artist" id="song-artist">Preparando transmisión...</h2>
+          
+          <!-- Letra grande en el centro -->
+          <div class="song-lyric" id="song-lyric">Bienvenido a Canal Stream Radio</div>
+          
+          <div class="player-controls">
+            <div class="progress-bar-container">
+              <div class="progress-bg"></div>
+              <div class="progress-fill" id="progress-fill"></div>
+            </div>
+            <div class="time-display">
+              <span id="time-current">0:00</span>
+              <span id="time-duration">0:00</span>
+            </div>
+          </div>
+          
+          <div class="autoplay-badge">
+            <span>▶ Autoplay activado</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recomendación del locutor (estilo Netflix "Porque te gustó...") -->
+      <div class="recomendacion-netflix">
+        <div class="rec-header">
+          <div class="rec-icon">🎙️</div>
+          <div class="rec-title">Locutor dice:</div>
+        </div>
+        <div class="rec-text" id="locutor-text">Cargando transmisión...</div>
+        <div class="rec-recomendacion" id="rec-text-2"></div>
+      </div>
+
+      <!-- Próximas canciones estilo lista Netflix -->
+      <div class="upcoming-section">
+        <div class="section-title">🎧 Próximas en la radio</div>
+        <div class="upcoming-list" id="upcoming-list"></div>
+      </div>
+
     </section>
 
-    <section id="tab-eventos" class="tab-panel">
-      <div class="section-header">
+    <!-- EVENTOS -->
+    <section id="tab-eventos" class="netflix-panel">
+      <div class="section-header-netflix">
         <h2>Eventos</h2>
         <p class="subtitle">Próximos estrenos y actividades</p>
       </div>
-      <div id="lista-eventos" class="events-list"></div>
+      <div id="lista-eventos" class="events-netflix"></div>
     </section>
   </main>
 
-  <footer class="footer">
-    <p>⚠️ Sube solo contenido que tengas derechos de compartir.</p>
+  <footer class="netflix-footer">
+    <p>⚠️ Canal Stream Radio · Sube solo contenido que tengas derechos de compartir · Autoplay continuo</p>
   </footer>
 
   <script src="app.js"></script>
