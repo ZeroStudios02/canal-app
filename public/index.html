@@ -67,10 +67,29 @@
     </div>
   </main>
 
-  <!-- Eventos -->
+  <!-- Eventos con contador tipo Fortnite -->
   <section class="events-section">
     <div class="events-header">
-      <h2>📅 Próximos Eventos</h2>
+      <h2>📅 Temporada Actual</h2>
+      <div class="season-counter" id="season-counter">
+        <div class="counter-item">
+          <div class="counter-value" id="counter-days">00</div>
+          <div class="counter-label">DÍAS</div>
+        </div>
+        <div class="counter-item">
+          <div class="counter-value" id="counter-hours">00</div>
+          <div class="counter-label">HORAS</div>
+        </div>
+        <div class="counter-item">
+          <div class="counter-value" id="counter-minutes">00</div>
+          <div class="counter-label">MINUTOS</div>
+        </div>
+        <div class="counter-item">
+          <div class="counter-value" id="counter-seconds">00</div>
+          <div class="counter-label">SEGUNDOS</div>
+        </div>
+      </div>
+      <div class="season-status" id="season-status">Calculando tiempo restante...</div>
     </div>
     <div id="lista-eventos" class="events-list"></div>
   </section>

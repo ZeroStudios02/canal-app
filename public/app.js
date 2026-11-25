@@ -10,7 +10,11 @@ let synth = window.speechSynthesis;
 let voices = [];
 let currentUtterance = null;
 
-// Letras generadas dinámicamente (placeholder hasta tener las reales)
+// Fecha de fin de temporada (tipo Fortnite) - 30 días desde ahora
+const SEASON_END = new Date();
+SEASON_END.setDate(SEASON_END.getDate() + 30);
+
+// Letras generadas dinámicamente
 function generateLyrics(title, artist) {
   const phrases = [
     `Sintoniza ${title}`,
@@ -41,7 +45,7 @@ async function loadSongs() {
   }
 }
 
-// Mezclar playlist (rotación aleatoria sin repetición hasta terminar todas)
+// Mezclar playlist
 function shufflePlaylist() {
   shuffledOrder = [...songs].sort(() => Math.random() - 0.5);
   currentIndex = 0;
@@ -57,28 +61,23 @@ function startRadio() {
 // Reproducir canción
 function playSong(index) {
   if (index < 0 || index >= shuffledOrder.length) {
-    // Termino la rotación, vuelvo a mezclar
     shufflePlaylist();
     index = 0;
   }
   currentIndex = index;
   const song = shuffledOrder[currentIndex];
 
-  // Actualizar UI - SIN mostrar nombre de canción
   document.getElementById('np-title').textContent = 'Canal Stream Radio';
   document.getElementById('np-artist').textContent = 'Emisión en vivo';
   document.getElementById('disk-cover').textContent = song.titulo.charAt(0).toUpperCase();
   document.getElementById('lyric-text').textContent = song.titulo.toUpperCase();
   document.getElementById('song-lyric').textContent = 'Iniciando transmisión...';
 
-  // Marcador del disco girando
   const disk = document.getElementById('np-disk');
   disk.classList.add('spinning');
 
-  // Locutor: anunciar canción (sin decir el nombre)
   speak('Nueva canción en Canal Stream Radio');
 
-  // Mensaje del locutor
   const locutorMsgs = [
     'Disfruta de esta transmisión',
     'La mejor música para tu momento',
@@ -89,18 +88,15 @@ function playSong(index) {
   ];
   const randomMsg = locutorMsgs[Math.floor(Math.random() * locutorMsgs.length)];
   document.getElementById('locutor-text').textContent = randomMsg;
-
   setTimeout(() => speak(randomMsg), 1000);
 
-  // Configurar audio
   audio.src = song.audio_url;
   audio.crossOrigin = 'anonymous';
 
-  // Intentar reproducir
   const playPromise = audio.play();
   if (playPromise !== undefined) {
     playPromise.catch(err => {
-      console.warn('Autoplay bloqueado o error de audio:', err);
+      console.warn('Autoplay bloqueado:', err);
       document.getElementById('song-lyric').textContent = 'Haz clic para iniciar la transmisión';
       document.body.addEventListener('click', () => {
         audio.play();
@@ -109,7 +105,6 @@ function playSong(index) {
     });
   }
 
-  // Letras dinámicas
   const lyrics = generateLyrics(song.titulo, song.artista);
   let lyricIdx = 0;
 
@@ -138,7 +133,6 @@ function playSong(index) {
 
   audio.ontimeupdate = () => { updateLyric(); updateProgress(); };
 
-  // Cuando termina, siguiente aleatoria
   audio.onended = () => {
     disk.classList.remove('spinning');
     speak('Siguiente canción en Canal Stream Radio');
@@ -152,7 +146,6 @@ function playSong(index) {
   };
 }
 
-// Formato de tiempo
 function formatTime(sec) {
   if (isNaN(sec)) return '0:00';
   const m = Math.floor(sec / 60);
@@ -160,30 +153,52 @@ function formatTime(sec) {
   return `${m}:${s}`;
 }
 
-// Locutor con Web Speech API
 function speak(text) {
-  if (currentUtterance) {
-    synth.cancel();
-  }
+  if (currentUtterance) synth.cancel();
   currentUtterance = new SpeechSynthesisUtterance(text);
   currentUtterance.lang = 'es-ES';
   currentUtterance.rate = 1.0;
   currentUtterance.volume = 0.7;
-
   if (voices.length > 0) {
     const esVoice = voices.find(v => v.lang.startsWith('es'));
     if (esVoice) currentUtterance.voice = esVoice;
   }
-
   synth.speak(currentUtterance);
 }
 
-// Cargar voces
 function loadVoices() {
   voices = synth.getVoices();
 }
 
-// Visualizador de audio simple (canvas)
+// Contador tipo Fortnite
+function updateSeasonCounter() {
+  const now = new Date().getTime();
+  const diff = SEASON_END.getTime() - now;
+
+  if (diff <= 0) {
+    document.getElementById('season-status').textContent = '¡La temporada ha terminado!';
+    document.getElementById('counter-days').textContent = '00';
+    document.getElementById('counter-hours').textContent = '00';
+    document.getElementById('counter-minutes').textContent = '00';
+    document.getElementById('counter-seconds').textContent = '00';
+    return;
+  }
+
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+  document.getElementById('counter-days').textContent = String(days).padStart(2, '0');
+  document.getElementById('counter-hours').textContent = String(hours).padStart(2, '0');
+  document.getElementById('counter-minutes').textContent = String(minutes).padStart(2, '0');
+  document.getElementById('counter-seconds').textContent = String(seconds).padStart(2, '0');
+}
+
+setInterval(updateSeasonCounter, 1000);
+updateSeasonCounter();
+
+// Visualizador de audio
 function initVisualizer() {
   const canvas = document.getElementById('visualizer');
   const ctx = canvas.getContext('2d');
@@ -213,32 +228,51 @@ function initVisualizer() {
       if (Math.abs(bar.h - bar.target) < 0.5) {
         bar.target = Math.random() * 80 + 20;
       }
-
       const x = centerX - (bars.length / 2) * (barWidth + gap) + i * (barWidth + gap);
       const y = centerY - bar.h / 2;
-
       ctx.fillStyle = bar.color;
       ctx.globalAlpha = 0.6;
       ctx.fillRect(x, y, barWidth, bar.h);
       ctx.globalAlpha = 1;
-
-      // Reflejo abajo
       ctx.fillStyle = bar.color;
       ctx.globalAlpha = 0.2;
       ctx.fillRect(x, centerY, barWidth, bar.h);
       ctx.globalAlpha = 1;
     });
-
     requestAnimationFrame(animate);
   }
   animate();
 }
 
-// Eventos
+// Eventos de voz
 window.speechSynthesis.onvoiceschanged = loadVoices;
 loadVoices();
 initVisualizer();
 
-// Navegación (solo eventos pestaña por si se añade más adelante)
-// Iniciar
+// Cargar eventos
+async function cargarEventos() {
+  try {
+    const res = await fetch(API + '/api/eventos');
+    const eventos = await res.json();
+    const cont = document.getElementById('lista-eventos');
+    cont.innerHTML = '';
+    if (eventos.length === 0) {
+      cont.innerHTML = '<div class="empty">Sin eventos programados.</div>';
+      return;
+    }
+    eventos.forEach(e => {
+      const fecha = new Date(e.fecha);
+      cont.innerHTML += `
+        <div class="event-card">
+          <h3>${e.titulo}</h3>
+          <p>${e.descripcion || 'Sin descripción'}</p>
+          <div class="time">📅 ${fecha.toLocaleString('es-ES')}</div>
+        </div>`;
+    });
+  } catch (e) {
+    console.error('Error cargando eventos:', e);
+  }
+}
+
+cargarEventos();
 loadSongs();
