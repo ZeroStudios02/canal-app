@@ -1,164 +1,154 @@
 const API = '';
 
 // Estado de la radio
-let currentSongIndex = 0;
 let songs = [];
+let shuffledOrder = [];
+let currentIndex = 0;
 let audio = new Audio();
 let audioStarted = false;
 let synth = window.speechSynthesis;
 let voices = [];
 let currentUtterance = null;
 
-// Letras simuladas para las canciones (porque no tenemos las reales)
-const LYRICS_DB = {
-  'el-final-de-todo': [
-    { t: 0,  text: 'Este es el final de todo' },
-    { t: 5,  text: 'No hay vuelta atrás' },
-    { t: 10, text: 'Las luces se apagan' },
-    { t: 15, text: 'Y solo queda el silencio' },
-    { t: 20, text: 'Canal Stream Radio' }
-  ],
-  'no-me-encuentres': [
-    { t: 0,  text: 'No me busques en el pasado' },
-    { t: 5,  text: 'Estoy en otro lugar ahora' },
-    { t: 10, text: 'La música sigue sonando' },
-    { t: 15, text: 'En Canal Stream Radio' },
-    { t: 20, text: 'Sigue escuchando' }
-  ]
-};
+// Letras generadas dinámicamente (placeholder hasta tener las reales)
+function generateLyrics(title, artist) {
+  const phrases = [
+    `Sintoniza ${title}`,
+    `${artist} en Canal Stream Radio`,
+    'Música para tu momento',
+    'La radio que te acompaña',
+    'Sonido en vivo, las 24 horas',
+    'Disfruta la transmisión',
+    'Canal Stream, siempre contigo',
+    'El mejor sonido para hoy',
+    'Déjate llevar por la música',
+    'Tu radio, tu momento'
+  ];
+  return phrases.map((t, i) => ({ t: i * 8, text: t }));
+}
 
 // Cargar canciones
 async function loadSongs() {
-  const res = await fetch(API + '/api/musica');
-  songs = await res.json();
-  renderUpcoming();
-  if (songs.length > 0 && !audioStarted) {
-    startRadio();
+  try {
+    const res = await fetch(API + '/api/musica');
+    songs = await res.json();
+    if (songs.length > 0) {
+      shufflePlaylist();
+      startRadio();
+    }
+  } catch (e) {
+    console.error('Error cargando canciones:', e);
   }
 }
 
-// Render lista de próximas
-function renderUpcoming() {
-  const cont = document.getElementById('upcoming-list');
-  cont.innerHTML = '';
-  songs.forEach((s, i) => {
-    const isActive = i === currentSongIndex;
-    cont.innerHTML += `
-      <div class="upcoming-item ${isActive ? 'active' : ''}">
-        <div class="upcoming-number">${i + 1}</div>
-        <div class="upcoming-info">
-          <h4>${s.titulo}</h4>
-          <p>${s.artista}</p>
-        </div>
-      </div>`;
-  });
+// Mezclar playlist (rotación aleatoria sin repetición hasta terminar todas)
+function shufflePlaylist() {
+  shuffledOrder = [...songs].sort(() => Math.random() - 0.5);
+  currentIndex = 0;
 }
 
-// Iniciar la radio (autoplay)
+// Iniciar radio
 function startRadio() {
   if (songs.length === 0) return;
-  playSong(currentSongIndex);
+  playSong(currentIndex);
   audioStarted = true;
 }
 
 // Reproducir canción
 function playSong(index) {
-  if (index < 0 || index >= songs.length) {
-    currentSongIndex = 0;
+  if (index < 0 || index >= shuffledOrder.length) {
+    // Termino la rotación, vuelvo a mezclar
+    shufflePlaylist();
     index = 0;
   }
-  currentSongIndex = index;
-  const song = songs[currentSongIndex];
-  
-  // Actualizar UI
-  document.getElementById('song-title').textContent = song.titulo;
-  document.getElementById('song-artist').textContent = song.artista;
-  document.getElementById('lyric-bg').textContent = song.titulo.toUpperCase();
+  currentIndex = index;
+  const song = shuffledOrder[currentIndex];
+
+  // Actualizar UI - SIN mostrar nombre de canción
+  document.getElementById('np-title').textContent = 'Canal Stream Radio';
+  document.getElementById('np-artist').textContent = 'Emisión en vivo';
+  document.getElementById('disk-cover').textContent = song.titulo.charAt(0).toUpperCase();
+  document.getElementById('lyric-text').textContent = song.titulo.toUpperCase();
   document.getElementById('song-lyric').textContent = 'Iniciando transmisión...';
-  
-  // Resaltar en lista
-  renderUpcoming();
-  
-  // Locutor: anunciar canción
-  speak(`Ahora suena ${song.titulo} de ${song.artista}, solo en Canal Stream Radio`);
-  
-  // Recomendación del locutor
-  setTimeout(() => {
-    const recomendaciones = [
-      `Esta canción es perfecta para este momento del día`,
-      `Te va a gustar esta, es uno de nuestros favoritos`,
-      `Sigue sintonizado, viene lo mejor`,
-      `Canal Stream Radio, siempre contigo`,
-      `Disfruta de esta transmisión`
-    ];
-    const rec = recomendaciones[Math.floor(Math.random() * recomendaciones.length)];
-    document.getElementById('locutor-text').textContent = rec;
-    speak(rec);
-  }, 3000);
-  
-  // Segunda recomendación
-  setTimeout(() => {
-    const rec2 = `Próximamente: más música de ${song.artista} y otros artistas increíbles`;
-    document.getElementById('rec-text-2').textContent = rec2;
-    speak(rec2);
-  }, 8000);
-  
+
+  // Marcador del disco girando
+  const disk = document.getElementById('np-disk');
+  disk.classList.add('spinning');
+
+  // Locutor: anunciar canción (sin decir el nombre)
+  speak('Nueva canción en Canal Stream Radio');
+
+  // Mensaje del locutor
+  const locutorMsgs = [
+    'Disfruta de esta transmisión',
+    'La mejor música para tu momento',
+    'Sigue sintonizado, viene lo mejor',
+    'Canal Stream Radio, siempre contigo',
+    'Déjate llevar por el sonido',
+    'Tu radio, tu compañía'
+  ];
+  const randomMsg = locutorMsgs[Math.floor(Math.random() * locutorMsgs.length)];
+  document.getElementById('locutor-text').textContent = randomMsg;
+
+  setTimeout(() => speak(randomMsg), 1000);
+
   // Configurar audio
   audio.src = song.audio_url;
   audio.crossOrigin = 'anonymous';
-  
+
   // Intentar reproducir
   const playPromise = audio.play();
   if (playPromise !== undefined) {
     playPromise.catch(err => {
-      console.error('Autoplay bloqueado por el navegador:', err);
-      document.getElementById('song-lyric').textContent = 'Haz clic en cualquier lugar para iniciar la transmisión';
+      console.warn('Autoplay bloqueado o error de audio:', err);
+      document.getElementById('song-lyric').textContent = 'Haz clic para iniciar la transmisión';
       document.body.addEventListener('click', () => {
         audio.play();
         audioStarted = true;
       }, { once: true });
     });
   }
-  
-  // Letras simuladas
-  const songKey = song.titulo.toLowerCase().replace(/\s+/g, '-');
-  const lyrics = LYRICS_DB[songKey] || [
-    { t: 0, text: song.titulo },
-    { t: 10, text: song.artista },
-    { t: 20, text: 'Canal Stream Radio' }
-  ];
-  
+
+  // Letras dinámicas
+  const lyrics = generateLyrics(song.titulo, song.artista);
   let lyricIdx = 0;
+
   const updateLyric = () => {
     const ct = audio.currentTime;
     while (lyricIdx < lyrics.length && lyrics[lyricIdx].t <= ct) {
-      document.getElementById('song-lyric').textContent = lyrics[lyricIdx].text;
-      document.getElementById('lyric-bg').textContent = lyrics[lyricIdx].text.toUpperCase();
+      const el = document.getElementById('song-lyric');
+      el.classList.add('fade');
+      setTimeout(() => {
+        el.textContent = lyrics[lyricIdx].text;
+        el.classList.remove('fade');
+      }, 400);
+      document.getElementById('lyric-text').textContent = lyrics[lyricIdx].text.toUpperCase();
       lyricIdx++;
     }
   };
-  
-  audio.ontimeupdate = updateLyric;
-  
-  // Progreso
+
   const updateProgress = () => {
-    const pct = (audio.currentTime / audio.duration) * 100 || 0;
-    document.getElementById('progress-fill').style.width = pct + '%';
-    document.getElementById('time-current').textContent = formatTime(audio.currentTime);
-    document.getElementById('time-duration').textContent = formatTime(audio.duration);
+    if (audio.duration) {
+      const pct = (audio.currentTime / audio.duration) * 100 || 0;
+      document.getElementById('progress-fill').style.width = pct + '%';
+      document.getElementById('time-current').textContent = formatTime(audio.currentTime);
+      document.getElementById('time-duration').textContent = formatTime(audio.duration);
+    }
   };
+
   audio.ontimeupdate = () => { updateLyric(); updateProgress(); };
-  
-  // Cuando termina, pasar a la siguiente automáticamente
+
+  // Cuando termina, siguiente aleatoria
   audio.onended = () => {
-    speak(`Siguiente canción en Canal Stream Radio`);
-    playSong(currentSongIndex + 1);
+    disk.classList.remove('spinning');
+    speak('Siguiente canción en Canal Stream Radio');
+    playSong(currentIndex + 1);
   };
-  
-  audio.onerror = (e) => {
-    console.error('Error de audio:', e);
-    document.getElementById('song-lyric').textContent = 'Error cargando canción. Pasando a la siguiente...';
-    setTimeout(() => playSong(currentSongIndex + 1), 3000);
+
+  audio.onerror = () => {
+    console.warn('Error cargando canción, pasando a la siguiente...');
+    disk.classList.remove('spinning');
+    setTimeout(() => playSong(currentIndex + 1), 2000);
   };
 }
 
@@ -178,57 +168,77 @@ function speak(text) {
   currentUtterance = new SpeechSynthesisUtterance(text);
   currentUtterance.lang = 'es-ES';
   currentUtterance.rate = 1.0;
-  currentUtterance.volume = 0.8;
-  
-  // Buscar voz en español
+  currentUtterance.volume = 0.7;
+
   if (voices.length > 0) {
     const esVoice = voices.find(v => v.lang.startsWith('es'));
     if (esVoice) currentUtterance.voice = esVoice;
   }
-  
+
   synth.speak(currentUtterance);
 }
 
-// Cargar voces del navegador
+// Cargar voces
 function loadVoices() {
   voices = synth.getVoices();
+}
+
+// Visualizador de audio simple (canvas)
+function initVisualizer() {
+  const canvas = document.getElementById('visualizer');
+  const ctx = canvas.getContext('2d');
+  let width, height, bars = [];
+
+  function resize() {
+    width = canvas.width = window.innerWidth;
+    height = canvas.height = 400;
+    bars = Array.from({ length: 60 }, () => ({
+      h: Math.random() * 50 + 20,
+      target: Math.random() * 50 + 20,
+      color: Math.random() > 0.5 ? '#e50914' : '#00f2ff'
+    }));
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  function animate() {
+    ctx.clearRect(0, 0, width, height);
+    const centerX = width / 2;
+    const centerY = height / 2;
+    const barWidth = 6;
+    const gap = 4;
+
+    bars.forEach((bar, i) => {
+      bar.h += (bar.target - bar.h) * 0.15;
+      if (Math.abs(bar.h - bar.target) < 0.5) {
+        bar.target = Math.random() * 80 + 20;
+      }
+
+      const x = centerX - (bars.length / 2) * (barWidth + gap) + i * (barWidth + gap);
+      const y = centerY - bar.h / 2;
+
+      ctx.fillStyle = bar.color;
+      ctx.globalAlpha = 0.6;
+      ctx.fillRect(x, y, barWidth, bar.h);
+      ctx.globalAlpha = 1;
+
+      // Reflejo abajo
+      ctx.fillStyle = bar.color;
+      ctx.globalAlpha = 0.2;
+      ctx.fillRect(x, centerY, barWidth, bar.h);
+      ctx.globalAlpha = 1;
+    });
+
+    requestAnimationFrame(animate);
+  }
+  animate();
 }
 
 // Eventos
 window.speechSynthesis.onvoiceschanged = loadVoices;
 loadVoices();
+initVisualizer();
 
-// Navegación entre pestañas
-document.querySelectorAll('.sidebar-item').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.sidebar-item').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.netflix-panel').forEach(p => p.classList.remove('active'));
-    btn.classList.add('active');
-    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
-    if (btn.dataset.tab === 'eventos') cargarEventos();
-  });
-});
-
-// Cargar eventos
-async function cargarEventos() {
-  const res = await fetch(API + '/api/eventos');
-  const eventos = await res.json();
-  const cont = document.getElementById('lista-eventos');
-  cont.innerHTML = '';
-  if (eventos.length === 0) {
-    cont.innerHTML = '<div class="empty">Sin eventos programados.</div>';
-    return;
-  }
-  eventos.forEach(e => {
-    const fecha = new Date(e.fecha);
-    cont.innerHTML += `
-      <div class="event-card-netflix">
-        <h3>${e.titulo}</h3>
-        <p>${e.descripcion || 'Sin descripción'}</p>
-        <div class="time">📅 ${fecha.toLocaleString('es-ES')}</div>
-      </div>`;
-  });
-}
-
+// Navegación (solo eventos pestaña por si se añade más adelante)
 // Iniciar
 loadSongs();
