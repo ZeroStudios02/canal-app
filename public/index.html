@@ -24,12 +24,32 @@
       overflow-x: hidden;
     }
 
-    /* ===== FONDO ANIMADO ===== */
+    /* ===== VIDEO DE YOUTUBE DE FONDO ===== */
+    #yt-bg {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      z-index: 1;
+      pointer-events: none;
+      opacity: 0.35;
+      filter: grayscale(40%) brightness(60%);
+      overflow: hidden;
+    }
+
+    #yt-bg iframe {
+      position: absolute;
+      top: 50%; left: 50%;
+      width: 100vw; height: 100vh;
+      transform: translate(-50%, -50%);
+      border: none;
+    }
+
+    /* ===== FONDO ANIMADO (canvas sobre el video) ===== */
     #bgCanvas {
       position: fixed;
       top: 0; left: 0;
       width: 100%; height: 100%;
-      z-index: -1;
+      z-index: 2;
       pointer-events: none;
     }
 
@@ -240,11 +260,11 @@
       position: fixed;
       top: 0; left: 0;
       width: 100%; height: 100%;
-      z-index: 0;
+      z-index: 3;
       display: flex;
       align-items: center;
       justify-content: center;
-      opacity: 0.05;
+      opacity: 0.06;
       pointer-events: none;
       font-size: 12rem;
       font-weight: 900;
@@ -459,7 +479,7 @@
       position: fixed;
       top: 0; left: 0;
       width: 100%; height: 100%;
-      z-index: 5;
+      z-index: 4;
       pointer-events: none;
       overflow: hidden;
     }
@@ -487,7 +507,7 @@
       position: fixed;
       top: 0; left: 0;
       width: 100%; height: 100%;
-      z-index: 5;
+      z-index: 4;
       pointer-events: none;
       overflow: hidden;
     }
@@ -509,7 +529,7 @@
       position: fixed;
       top: 0; left: 0;
       width: 100%; height: 100%;
-      z-index: 5;
+      z-index: 4;
       pointer-events: none;
       overflow: hidden;
     }
@@ -532,7 +552,7 @@
       position: fixed;
       top: 0; left: 0;
       width: 100%; height: 100%;
-      z-index: 5;
+      z-index: 4;
       pointer-events: none;
       overflow: hidden;
     }
@@ -555,11 +575,15 @@
       80% { transform: translate(3px, -3px); opacity: 0.15; }
     }
 
-    /* Ocultar contenedores de animación por defecto */
     .anim-container { display: none; }
   </style>
 </head>
 <body>
+
+  <!-- Video de YouTube de fondo -->
+  <div id="yt-bg">
+    <iframe id="yt-iframe" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+  </div>
 
   <canvas id="bgCanvas"></canvas>
 
@@ -585,7 +609,7 @@
         <div class="btn-text">REPRODUCIR RADIO</div>
         <div class="btn-sub">Haz clic para iniciar la transmisión</div>
       </div>
-    </main>
+    </div>
 
     <div class="disk-container" id="disk">
       <div class="disk-cover" id="disk-cover">?</div>
@@ -627,14 +651,14 @@
   </main>
 
   <!-- Contenedores de animación por canción -->
-  <div class="anim-container" id="anim-ranma">
+  <div class="anim-container anim-ranma" id="anim-ranma">
     <div class="ranma-char ranma-yellow">♂️</div>
     <div class="ranma-char ranma-blue">♀️</div>
     <div class="ranma-char ranma-red">🥋</div>
     <div class="ranma-char ranma-pink">💕</div>
     <div class="ranma-char ranma-green">🐷</div>
   </div>
-  <div class="anim-container" id="anim-circus">
+  <div class="anim-container anim-circus" id="anim-circus">
     <div class="circus-ball" style="background:#e50914; top:10%; left:15%; animation-delay:0s;"></div>
     <div class="circus-ball" style="background:#00f2ff; top:20%; left:35%; animation-delay:0.5s;"></div>
     <div class="circus-ball" style="background:#ffd700; top:15%; left:55%; animation-delay:1s;"></div>
@@ -644,7 +668,7 @@
     <div class="circus-ball" style="background:#e50914; top:40%; left:45%; animation-delay:3s;"></div>
     <div class="circus-ball" style="background:#00f2ff; top:45%; left:65%; animation-delay:3.5s;"></div>
   </div>
-  <div class="anim-container" id="anim-fire">
+  <div class="anim-container anim-fire" id="anim-fire">
     <div class="fire-drop" style="left:5%; animation-delay:0s;"></div>
     <div class="fire-drop" style="left:15%; animation-delay:0.3s;"></div>
     <div class="fire-drop" style="left:25%; animation-delay:0.6s;"></div>
@@ -656,7 +680,7 @@
     <div class="fire-drop" style="left:85%; animation-delay:2.4s;"></div>
     <div class="fire-drop" style="left:90%; animation-delay:2.7s;"></div>
   </div>
-  <div class="anim-container" id="anim-digital">
+  <div class="anim-container anim-digital" id="anim-digital">
     <div class="digital-glitch" style="top:20%; left:10%; animation-delay:0s;">0101</div>
     <div class="digital-glitch" style="top:30%; left:80%; animation-delay:0.5s;">1010</div>
     <div class="digital-glitch" style="top:40%; left:15%; animation-delay:1s;">0011</div>
@@ -696,6 +720,23 @@
   </footer>
 
   <script>
+    // ===== MAPA DE VIDEOS DE YOUTUBE POR CANCIÓN =====
+    const YT_VIDEOS = {
+      'circo digital (versión pomni)': 'zZrGZw8Xfjo',
+      'circo digital (versión pomni) 2': 'gKV1Ve2K54o',
+      'la puerta del circo digital - capítulo 8': '1eiLhutOsb8',
+      'la puerta del circo digital 2 - capítulo 8': 'K7X41iQKeUM',
+      'miedo en la pista': '6yLMnj2V0sA',
+      'mitad y mitad 2': 'MEEfdd11Xqg',
+      'mitad y mitad': 'KPZ3fuAc-zM',
+      '¡cambio de vida!': 'bATE56naqyM',
+      'canción del circo digital - capítulo 8': 'zZrGZw8Xfjo',
+      'circo digital': '1eiLhutOsb8',
+      'circo digital full': 'gKV1Ve2K54o',
+      'ecos del circo digital - capítulo 8': 'K7X41iQKeUM',
+      'montañas en fuego': 'Oc3ccB2GuvY'
+    };
+
     // ===== DATOS =====
     const API = '';
     let songs = [];
@@ -703,6 +744,8 @@
     let currentIndex = 0;
     let audio = new Audio();
     let isPlaying = false;
+    let ytIframe = document.getElementById('yt-iframe');
+    let ytReady = false;
 
     // ===== CARGAR CANCIONES =====
     async function loadSongs() {
@@ -740,15 +783,28 @@
     }
 
     function updatePlaylistHighlight() {
-      document.querySelectorAll('.song-item').forEach((el, i) => {
-        el.classList.remove('playing');
-      });
+      document.querySelectorAll('.song-item').forEach(el => el.classList.remove('playing'));
       if (shuffledOrder[currentIndex]) {
         const song = shuffledOrder[currentIndex];
         const idx = songs.indexOf(song);
         if (idx >= 0) {
-          document.querySelectorAll('.song-item')[idx].classList.add('playing');
+          const items = document.querySelectorAll('.song-item');
+          if (items[idx]) items[idx].classList.add('playing');
         }
+      }
+    }
+
+    // ===== VIDEO DE YOUTUBE =====
+    function setYtVideo(title) {
+      const key = (title || '').toLowerCase().trim();
+      const videoId = YT_VIDEOS[key];
+      if (!videoId) {
+        ytIframe.src = '';
+        return;
+      }
+      const src = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0&modestbranding=1`;
+      if (ytIframe.src.indexOf(videoId) === -1) {
+        ytIframe.src = src;
       }
     }
 
@@ -812,6 +868,7 @@
 
       updatePlaylistHighlight();
       setAnimation(song.titulo);
+      setYtVideo(song.titulo);
 
       speak('Nueva canción en Canal Stream Radio');
 
@@ -860,7 +917,6 @@
       const t = (title || '').toLowerCase();
 
       if (t.includes('mitad y mitad') || t.includes('mitad')) {
-        // Ranma 1/2 - mitad y mitad
         const c = document.getElementById('anim-ranma');
         c.style.display = 'block';
       } else if (t.includes('circo') || t.includes('digital')) {
