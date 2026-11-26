@@ -125,6 +125,12 @@ app.get('/api/health', (req, res) => {
   res.json({ ok: true, app: 'canal-app' });
 });
 
+app.get('/app.js', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'app.js'));
+});
+app.get('/style.css', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'style.css'));
+});
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
