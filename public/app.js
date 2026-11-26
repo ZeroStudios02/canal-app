@@ -10,6 +10,19 @@ let isPlaying = false;
 let synth = window.speechSynthesis;
 let voices = [];
 let currentUtterance = null;
+let logEl = null;
+
+// ==================== LOG EN PANTALLA (diagnóstico) ====================
+function log(msg) {
+  console.log(msg);
+  const el = document.getElementById('debug-log');
+  if (el) {
+    const line = document.createElement('div');
+    line.textContent = new Date().toLocaleTimeString() + ' · ' + msg;
+    el.appendChild(line);
+    el.scrollTop = el.scrollHeight;
+  }
+}
 
 // ==================== FUNCIONES DE AUDIO ====================
 function ensureAudioContext() {
@@ -17,38 +30,38 @@ function ensureAudioContext() {
     const AC = window.AudioContext || window.webkitAudioContext;
     if (AC) {
       audioCtx = new AC();
+      log('AudioContext creado');
       if (audioCtx.state === 'suspended') {
-        audioCtx.resume();
+        audioCtx.resume().then(() => log('AudioContext reanudado'));
       }
+    } else {
+      log('AudioContext no disponible');
     }
   }
 }
 
 function initAudio() {
+  log('Inicializando elemento audio');
   audio.crossOrigin = 'anonymous';
   audio.preload = 'auto';
   audio.muted = false;
   audio.volume = 1.0;
 
-  audio.oncanplay = () => {
-    console.log('Audio puede reproducirse');
-  };
-
+  audio.oncanplay = () => log('Audio: puede reproducirse (canplay)');
+  audio.oncanplaythrough = () => log('Audio: puede reproducirse completo (canplaythrough)');
   audio.onerror = (e) => {
-    console.error('Error de audio:', e);
+    log('Audio ERROR: ' + (e.target ? e.target.error ? e.target.error.message : 'desconocido' : 'desconocido'));
     const el = document.getElementById('song-lyric');
     if (el) el.textContent = 'Error cargando canción. Pasando a la siguiente...';
     setTimeout(() => nextSong(), 2000);
   };
-
   audio.onended = () => {
-    console.log('Canción terminada, siguiente...');
+    log('Audio: canción terminó');
     const disk = document.getElementById('np-disk');
     if (disk) disk.classList.remove('spinning');
     speak('Siguiente canción en Canal Stream Radio');
     nextSong();
   };
-
   audio.ontimeupdate = () => {
     const pct = audio.duration ? (audio.currentTime / audio.duration) * 100 : 0;
     const fill = document.getElementById('progress-fill');
@@ -59,11 +72,13 @@ function initAudio() {
     if (dur) dur.textContent = formatTime(audio.duration);
     updateLyric(audio.currentTime);
   };
+  log('Elemento audio listo');
 }
 
 function playSong(index) {
   if (songs.length === 0) {
     document.getElementById('song-lyric').textContent = 'No hay canciones disponibles';
+    log('No hay canciones');
     return;
   }
 
@@ -74,9 +89,9 @@ function playSong(index) {
   currentIndex = index;
 
   const song = shuffledOrder[currentIndex];
-  console.log('Reproduciendo:', song.titulo, song.audio_url);
+  log('Reproduciendo canción #' + (currentIndex + 1) + ': ' + song.titulo);
+  log('URL: ' + song.audio_url);
 
-  // Actualizar UI
   document.getElementById('np-title').textContent = song.titulo || 'Canal Stream Radio';
   document.getElementById('np-artist').textContent = song.artista || 'Locutor en vivo';
   document.getElementById('disk-cover').textContent = (song.titulo || '?').charAt(0).toUpperCase();
@@ -86,7 +101,6 @@ function playSong(index) {
   const disk = document.getElementById('np-disk');
   if (disk) disk.classList.add('spinning');
 
-  // Locutor
   speak('Nueva canción en Canal Stream Radio');
 
   const locutorMsgs = [
@@ -102,16 +116,18 @@ function playSong(index) {
   if (locutorEl) locutorEl.textContent = randomMsg;
   setTimeout(() => speak(randomMsg), 1000);
 
-  // Cargar y reproducir audio
   audio.src = song.audio_url;
   audio.muted = false;
   audio.volume = 1.0;
 
+  log('Llamando a audio.play()...');
   const playPromise = audio.play();
   if (playPromise !== undefined) {
-    playPromise.catch(err => {
-      console.error('Error al reproducir:', err);
-      document.getElementById('song-lyric').textContent = 'Error de reproducción. Intenta hacer clic otra vez.';
+    playPromise.then(() => {
+      log('Audio reproduciéndose OK');
+    }).catch(err => {
+      log('Error al reproducir: ' + err.message);
+      document.getElementById('song-lyric').textContent = 'Error de reproducción. Haz clic otra vez.';
     });
   }
 }
@@ -164,7 +180,10 @@ function updateLyric(currentTime) {
 
 // ==================== LOCUTOR VIRTUAL ====================
 function speak(text) {
-  if (!synth) return;
+  if (!synth) {
+    log('Locutor: speechSynthesis no disponible');
+    return;
+  }
   if (currentUtterance) synth.cancel();
   currentUtterance = new SpeechSynthesisUtterance(text);
   currentUtterance.lang = 'es-ES';
@@ -175,35 +194,38 @@ function speak(text) {
     if (esVoice) currentUtterance.voice = esVoice;
   }
   synth.speak(currentUtterance);
+  log('Locutor dice: ' + text);
 }
 
 function loadVoices() {
   voices = synth.getVoices();
+  log('Voces cargadas: ' + voices.length);
 }
 
 // ==================== CARGA DE CANCIONES ====================
 async function loadSongs() {
   try {
+    log('Cargando canciones desde /api/musica...');
     const res = await fetch(API + '/api/musica');
     songs = await res.json();
-    console.log('Canciones cargadas:', songs.length);
+    log('Canciones cargadas: ' + songs.length);
     if (songs.length > 0) {
       shuffledOrder = [...songs].sort(() => Math.random() - 0.5);
       currentIndex = 0;
     }
   } catch (e) {
-    console.error('Error cargando canciones:', e);
+    log('Error cargando canciones: ' + e.message);
   }
 }
 
 // ==================== BOTÓN DE REPRODUCCIÓN ====================
 function startRadio() {
+  log('=== CLIC EN BOTÓN REPRODUCIR ===');
   ensureAudioContext();
   if (songs.length === 0) return;
   playSong(currentIndex);
   isPlaying = true;
 
-  // Ocultar botón
   const btn = document.getElementById('btn-play-overlay');
   if (btn && btn.parentNode) {
     btn.style.opacity = '0';
@@ -211,12 +233,26 @@ function startRadio() {
   }
 }
 
-function ocultarBotonPlay() {
-  const btn = document.getElementById('btn-play-overlay');
-  if (btn && btn.parentNode) {
-    btn.style.opacity = '0';
-    setTimeout(() => btn.parentNode.removeChild(btn), 600);
+// ==================== PRUEBA DE AUDIO DIRECTA ====================
+function testAudio() {
+  log('=== PRUEBA DE AUDIO DIRECTA ===');
+  ensureAudioContext();
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) {
+    log('Web Audio API no disponible');
+    return;
   }
+  const ctx = new AC();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(440, ctx.currentTime);
+  gain.gain.setValueAtTime(0.3, ctx.currentTime);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start();
+  osc.stop(ctx.currentTime + 0.5);
+  log('Tono de prueba reproducido (440Hz, 0.5s)');
 }
 
 // ==================== VISUALIZADOR ====================
@@ -339,4 +375,22 @@ cargarEventos();
 
 document.getElementById('btn-play-overlay').addEventListener('click', () => {
   startRadio();
+});
+
+// Botón de prueba de audio (solo para diagnóstico)
+document.addEventListener('DOMContentLoaded', () => {
+  const btn = document.getElementById('btn-play-overlay');
+  if (btn) {
+    const testBtn = document.createElement('div');
+    testBtn.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:10000;background:#e50914;color:white;padding:10px 20px;border-radius:5px;font-size:12px;cursor:pointer;font-family:sans-serif;';
+    testBtn.textContent = '🔊 Probar audio';
+    testBtn.onclick = testAudio;
+    document.body.appendChild(testBtn);
+    
+    const debug = document.createElement('div');
+    debug.id = 'debug-log';
+    debug.style.cssText = 'position:fixed;bottom:20px;left:20px;z-index:10000;background:rgba(0,0,0,0.8);color:#0f0;padding:10px;border-radius:5px;font-family:monospace;font-size:11px;max-height:200px;overflow:auto;max-width:400px;';
+    document.body.appendChild(debug);
+    log('Página cargada. Listo para reproducir.');
+  }
 });
