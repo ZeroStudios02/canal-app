@@ -801,7 +801,7 @@
         ytIframe.src = '';
         return;
       }
-      const src = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0&modestbranding=1`;
+      const src = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0&modestbranding=1&cc_load_policy=0&iv_load_policy=3&disablekb=1`;
       if (ytIframe.src.indexOf(videoId) === -1) {
         ytIframe.src = src;
       }
