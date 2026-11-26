@@ -34,7 +34,7 @@
       pointer-events: none;
     }
 
-    /* ===== PANTALLA FINAL TEMPORADA (tipo Fortnite) ===== */
+    /* ===== PANTALLA FINAL TEMPORADA (tipo Fortnite - solo contador) ===== */
     #season-end {
       position: fixed;
       top: 0; left: 0;
@@ -115,6 +115,76 @@
     }
 
     .end-btn:hover {
+      background: var(--rojo-oscuro);
+    }
+
+    /* ===== PANTALLA EVENTO DEL PUZZLE (tu imagen directa) ===== */
+    #evento-puzzle {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 20000;
+      background: var(--negro);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 2rem;
+    }
+
+    #evento-puzzle.active { display: flex; }
+
+    .evento-title {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--rojo);
+      text-transform: uppercase;
+      margin-bottom: 1.5rem;
+      animation: endPulse 2s infinite;
+    }
+
+    .evento-img-container {
+      width: 100%;
+      max-width: 900px;
+      height: 550px;
+      background: var(--gris);
+      border: 3px solid var(--rojo);
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .evento-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .evento-note {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .evento-btn {
+      padding: 1rem 2rem;
+      background: var(--rojo);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    .evento-btn:hover {
       background: var(--rojo-oscuro);
     }
 
@@ -253,13 +323,6 @@
       background: #00c853;
       border-color: #00e676;
       cursor: default;
-    }
-
-    .puzzle-hint {
-      color: var(--muted);
-      font-size: 0.9rem;
-      text-align: center;
-      margin-bottom: 1rem;
     }
 
     .puzzle-btn {
@@ -727,6 +790,7 @@
       .btn-core { width: 150px; height: 150px; }
       .btn-text { font-size: 1.3rem; }
       .brand-name { font-size: 1.2rem; }
+      .evento-img-container { height: 400px; }
     }
 
     /* ===== ANIMACIONES POR CANCIÓN ===== */
@@ -834,7 +898,7 @@
 </head>
 <body>
 
-  <!-- Pantalla final de temporada (tipo Fortnite) -->
+  <!-- Pantalla final de temporada (solo cuando termine el contador) -->
   <div id="season-end">
     <div class="end-logo">FIN DE TEMPORADA</div>
     <div class="end-title">Evento de Fortnite - Temporada Noviembre a Diciembre</div>
@@ -843,6 +907,16 @@
     </div>
     <div class="end-note">La temporada ha terminado. Disfruta del evento en directo.</div>
     <button class="end-btn" id="btn-volver-radio">Volver a la Radio</button>
+  </div>
+
+  <!-- Pantalla evento del puzle (tu imagen directa al completar puzle) -->
+  <div id="evento-puzzle">
+    <div class="evento-title">Evento Directo Fortnite</div>
+    <div class="evento-img-container">
+      <img id="evento-img" src="imagen-evento.png" alt="Evento Fortnite" class="evento-img">
+    </div>
+    <div class="evento-note">Evento en directo de la temporada</div>
+    <button class="evento-btn" id="btn-cerrar-evento">Volver a la Radio</button>
   </div>
 
   <canvas id="bgCanvas"></canvas>
@@ -863,7 +937,6 @@
   <!-- Puzzle Modal -->
   <div id="puzzle-modal">
     <div class="puzzle-title">Desbloquea el Evento</div>
-    <div class="puzzle-hint">Haz clic en las piezas en el orden correcto</div>
     <div class="puzzle-board" id="puzzle-board"></div>
     <button class="puzzle-btn" id="puzzle-btn">CONTINUAR AL EVENTO</button>
   </div>
@@ -889,7 +962,7 @@
     <div class="now-playing">
       <div class="np-label">AHORA SONANDO</div>
       <div class="np-title" id="np-title">ZeroStudiosRadioSongs</div>
-      <div class="np-artist" id="np-artist">Locutor en vivo</div>
+      <div class="np-artist" id="np-artist">ZeroStudiosSongs</div>
     </div>
 
     <div class="lyric-section">
@@ -987,9 +1060,9 @@
 
   <script>
     // ===== ESTADO =====
-    let directTerminado = false; // Se pone true cuando termina el directo
+    let directTerminado = false;
 
-    // ===== LETRAS POR CANCIÓN (claras y entendibles) =====
+    // ===== LETRAS POR CANCIÓN =====
     const LYRICS_MAP = {
       'circo digital (versión pomni)': [
         { t: 0, text: 'Bienvenidos al circo digital' },
@@ -1031,7 +1104,7 @@
         { t: 0, text: 'Mitad chico' },
         { t: 4, text: 'Mitad chica' },
         { t: 8, text: 'Ranma Saotome' },
-        { t: 12, text: 'La maldición continua' }
+        { t: 12, text: 'La maldición continúa' }
       ],
       '¡cambio de vida!': [
         { t: 0, text: 'Cambio de vida' },
@@ -1194,7 +1267,6 @@
     function playSong(index) {
       if (songs.length === 0) return;
       if (directTerminado) {
-        // Después del directo, ocultar Montañas en Fuego
         document.querySelectorAll('.song-item').forEach(el => {
           if (el.querySelector('.song-title').textContent.includes('Montañas en Fuego')) {
             el.classList.add('hidden');
@@ -1309,7 +1381,6 @@
     loadVoices();
 
     // ===== CONTADOR TEMPORADA =====
-    // Evento final de temporada: 4 de diciembre de 2026 a las 20:00
     const SEASON_END = new Date('2026-12-04T20:00:00');
 
     function updateSeasonCounter() {
@@ -1335,7 +1406,6 @@
 
     function showSeasonEnd() {
       document.getElementById('season-end').classList.add('active');
-      // Parar la radio
       audio.pause();
       audio.src = '';
       document.getElementById('disk').classList.remove('spinning');
@@ -1345,7 +1415,7 @@
     updateSeasonCounter();
 
     // ===== PUZZLE =====
-    const PUZZLE_ORDER = [1, 2, 3, 4, 5, 6, 7, 8, 9]; // Orden correcto de piezas
+    const PUZZLE_ORDER = [1, 2, 3, 4, 5, 6, 7, 8, 9];
     let puzzleSequence = [];
 
     function initPuzzle() {
@@ -1353,7 +1423,6 @@
       board.innerHTML = '';
       puzzleSequence = [];
 
-      // Mezclar piezas
       const shuffled = [...PUZZLE_ORDER].sort(() => Math.random() - 0.5);
       shuffled.forEach(num => {
         const piece = document.createElement('div');
@@ -1370,12 +1439,10 @@
     function handlePuzzleClick(num, piece) {
       puzzleSequence.push(num);
 
-      // Verificar si va en orden correcto
       const expected = PUZZLE_ORDER[puzzleSequence.length - 1];
       if (num === expected) {
         piece.classList.add('correct');
       } else {
-        // Si se equivoca, reiniciar
         setTimeout(() => {
           puzzleSequence = [];
           document.querySelectorAll('.puzzle-piece').forEach(p => p.classList.remove('correct'));
@@ -1384,7 +1451,6 @@
         return;
       }
 
-      // Si completó todo el puzle
       if (puzzleSequence.length === PUZZLE_ORDER.length) {
         document.getElementById('puzzle-btn').classList.add('ready');
       }
@@ -1396,18 +1462,21 @@
       initPuzzle();
     });
 
-    // Cerrar puzle y continuar al evento
+    // Completar puzle -> mostrar evento directo (tu imagen)
     document.getElementById('puzzle-btn').addEventListener('click', () => {
       document.getElementById('puzzle-modal').classList.remove('active');
-      // Aquí podrías redirigir a otra página o mostrar algo
-      alert('¡Puzzle completado! Acceso al evento desbloqueado.');
+      document.getElementById('evento-puzzle').classList.add('active');
     });
 
-    // Volver a la radio desde pantalla final
+    // Cerrar evento del puzle y volver a radio
+    document.getElementById('btn-cerrar-evento').addEventListener('click', () => {
+      document.getElementById('evento-puzzle').classList.remove('active');
+    });
+
+    // Volver a la radio desde pantalla final de temporada
     document.getElementById('btn-volver-radio').addEventListener('click', () => {
       document.getElementById('season-end').classList.remove('active');
       directTerminado = true;
-      // Reiniciar radio
       if (songs.length > 0) {
         shuffledOrder = [...songs].sort(() => Math.random() - 0.5);
         currentIndex = 0;
