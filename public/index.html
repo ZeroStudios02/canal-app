@@ -82,11 +82,16 @@
       border-radius: 12px;
       overflow: hidden;
       margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
     }
 
-    .end-video iframe {
-      width: 100%; height: 100%;
-      border: none;
+    .end-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
     }
 
     .end-note {
@@ -834,7 +839,7 @@
     <div class="end-logo">FIN DE TEMPORADA</div>
     <div class="end-title">Evento de Fortnite - Temporada Noviembre a Diciembre</div>
     <div class="end-video">
-      <iframe id="final-youtube" src="" frameborder="0" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+      <img id="final-img" src="imagen-evento.png" alt="Evento Fortnite" class="end-img">
     </div>
     <div class="end-note">La temporada ha terminado. Disfruta del evento en directo.</div>
     <button class="end-btn" id="btn-volver-radio">Volver a la Radio</button>
@@ -1101,7 +1106,7 @@
         div.innerHTML = `
           <div class="song-num">${i+1}</div>
           <div class="song-title">${s.titulo}</div>
-          <div class="song-artist">${s.artista}</div>
+          <div class="song-artist">ZeroStudiosSongs</div>
         `;
         div.onclick = () => {
           currentIndex = songs.indexOf(s);
@@ -1206,7 +1211,7 @@
       console.log('Reproduciendo:', song.titulo);
 
       document.getElementById('np-title').textContent = song.titulo || 'ZeroStudiosRadioSongs';
-      document.getElementById('np-artist').textContent = song.artista || 'Locutor en vivo';
+      document.getElementById('np-artist').textContent = 'ZeroStudiosSongs';
       document.getElementById('disk-cover').textContent = (song.titulo || '?').charAt(0).toUpperCase();
       document.getElementById('song-lyric').textContent = 'Cargando canción...';
 
@@ -1330,7 +1335,6 @@
 
     function showSeasonEnd() {
       document.getElementById('season-end').classList.add('active');
-      document.getElementById('final-youtube').src = 'https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1&mute=0&controls=1&modestbranding=1&cc_load_policy=0&iv_load_policy=3';
       // Parar la radio
       audio.pause();
       audio.src = '';
@@ -1402,7 +1406,6 @@
     // Volver a la radio desde pantalla final
     document.getElementById('btn-volver-radio').addEventListener('click', () => {
       document.getElementById('season-end').classList.remove('active');
-      document.getElementById('final-youtube').src = '';
       directTerminado = true;
       // Reiniciar radio
       if (songs.length > 0) {
