@@ -3,111 +3,974 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Canal Stream Radio</title>
-  <link rel="stylesheet" href="style.css">
+  <title>Canal Stream Radio - Escucha tus canciones</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --rojo: #e50914;
+      --azul: #00f2ff;
+      --negro: #0a0a0a;
+      --gris: #1a1a2e;
+      --texto: #ffffff;
+      --muted: #9aa0b2;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--negro);
+      color: var(--texto);
+      overflow-x: hidden;
+    }
+
+    /* ===== FONDO ANIMADO ===== */
+    #bgCanvas {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: -1;
+      pointer-events: none;
+    }
+
+    /* ===== HEADER ===== */
+    header {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 60px;
+      z-index: 100;
+      background: linear-gradient(to bottom, rgba(10,10,10,0.95), transparent);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 2rem;
+      border-bottom: 1px solid rgba(229, 9, 20, 0.3);
+    }
+
+    .logo {
+      font-size: 1.5rem;
+      font-weight: 900;
+      color: white;
+      letter-spacing: -1px;
+    }
+
+    .logo span { color: var(--rojo); }
+
+    .live {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      color: var(--rojo);
+      font-weight: 700;
+      font-size: 0.85rem;
+      background: rgba(229, 9, 20, 0.1);
+      padding: 0.4rem 1rem;
+      border-radius: 30px;
+      border: 1px solid rgba(229, 9, 20, 0.3);
+    }
+
+    .dot {
+      width: 8px; height: 8px;
+      background: var(--rojo);
+      border-radius: 50%;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(229, 9, 20, 0.7); }
+      70% { box-shadow: 0 0 0 12px rgba(229, 9, 20, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(229, 9, 20, 0); }
+    }
+
+    /* ===== REPRODUCTOR PRINCIPAL ===== */
+    .radio-player {
+      margin-top: 60px;
+      min-height: calc(100vh - 60px - 200px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      position: relative;
+      z-index: 10;
+    }
+
+    /* Botón grande de reproducción - Z-INDEX MÁXIMO */
+    #btn-play-overlay {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(10, 10, 10, 0.92);
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      backdrop-filter: blur(12px);
+      transition: opacity 0.5s ease;
+    }
+
+    .btn-content {
+      text-align: center;
+      animation: btnPulse 2.5s infinite;
+    }
+
+    @keyframes btnPulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.03); opacity: 0.85; }
+    }
+
+    .btn-icon { font-size: 5rem; margin-bottom: 1rem; display: block; }
+
+    .btn-text {
+      font-size: 2rem;
+      font-weight: 900;
+      color: white;
+      margin-bottom: 0.5rem;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+    }
+
+    .btn-sub {
+      font-size: 1rem;
+      color: var(--muted);
+    }
+
+    /* Disco giratorio */
+    .disk-container {
+      width: 280px;
+      height: 280px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #1a1a2e, #16213e);
+      border: 5px solid var(--rojo);
+      margin: 0 auto 2rem;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 50px rgba(229, 9, 20, 0.4);
+      animation: diskRotate 20s linear infinite;
+      animation-play-state: paused;
+    }
+
+    .disk-container.spinning { animation-play-state: running; }
+
+    .disk-cover {
+      width: 220px;
+      height: 220px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--azul), var(--rojo));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 5rem;
+      color: white;
+      font-weight: 900;
+      border: 8px solid var(--negro);
+      z-index: 2;
+    }
+
+    .disk-ring {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      border-radius: 50%;
+      border: 2px dashed rgba(229, 9, 20, 0.3);
+      animation: diskSpin 3s linear infinite;
+    }
+
+    @keyframes diskRotate {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes diskSpin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .now-playing {
+      text-align: center;
+      max-width: 700px;
+    }
+
+    .np-label {
+      font-size: 0.8rem;
+      letter-spacing: 2px;
+      color: var(--rojo);
+      text-transform: uppercase;
+      margin-bottom: 0.5rem;
+    }
+
+    .np-title {
+      font-size: 2.2rem;
+      font-weight: 800;
+      margin: 0 0 0.5rem;
+      color: white;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+    }
+
+    .np-artist {
+      font-size: 1.1rem;
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    /* ===== LETRA CENTRAL GRANDE ===== */
+    .lyric-section {
+      position: relative;
+      z-index: 10;
+      max-width: 900px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      text-align: center;
+    }
+
+    #song-lyric {
+      font-size: 2.5rem;
+      font-weight: 800;
+      color: white;
+      line-height: 1.4;
+      text-shadow: 0 3px 10px rgba(0,0,0,0.9);
+      transition: all 0.8s ease;
+      min-height: 3.5rem;
+    }
+
+    #song-lyric.fade { opacity: 0.3; }
+
+    #bg-lyric {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0.05;
+      pointer-events: none;
+      font-size: 12rem;
+      font-weight: 900;
+      color: white;
+      text-transform: uppercase;
+      letter-spacing: -6px;
+      text-align: center;
+      line-height: 0.8;
+      white-space: pre-wrap;
+    }
+
+    /* ===== PROGRESO ===== */
+    .progress-section {
+      width: 100%;
+      max-width: 600px;
+      margin: 2rem 0 1rem;
+    }
+
+    .progress-bg {
+      height: 4px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--rojo), var(--azul));
+      width: 0%;
+      border-radius: 2px;
+      transition: width 0.3s linear;
+    }
+
+    .times {
+      display: flex;
+      justify-content: space-between;
+      max-width: 600px;
+      margin: 0.5rem auto 0;
+      font-size: 0.8rem;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ===== LOCUTOR ===== */
+    .locutor-box {
+      position: relative;
+      z-index: 10;
+      max-width: 700px;
+      margin: 2rem auto;
+      padding: 1.5rem 2rem;
+      background: rgba(20, 20, 30, 0.7);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 12px;
+      backdrop-filter: blur(10px);
+    }
+
+    .locutor-label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--rojo);
+      font-weight: 700;
+      font-size: 0.9rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .locutor-text {
+      font-size: 1.1rem;
+      color: var(--texto);
+      line-height: 1.5;
+      font-style: italic;
+    }
+
+    /* ===== CONTADOR TEMPORADA (ABAJO, SEPARADO) ===== */
+    .season-section {
+      padding: 3rem 2rem;
+      background: rgba(20, 20, 30, 0.4);
+      border-top: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .season-header {
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .season-header h2 {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: white;
+      margin-bottom: 0.5rem;
+    }
+
+    .season-counter {
+      display: flex;
+      justify-content: center;
+      gap: 2.5rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .counter-item {
+      text-align: center;
+      background: rgba(10, 10, 10, 0.6);
+      padding: 1.2rem 1.5rem;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.08);
+      min-width: 90px;
+    }
+
+    .counter-value {
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: var(--rojo);
+      display: block;
+      font-variant-numeric: tabular-nums;
+      text-shadow: 0 0 15px rgba(229, 9, 20, 0.6);
+    }
+
+    .counter-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--muted);
+      margin-top: 0.3rem;
+    }
+
+    .season-status {
+      text-align: center;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    /* ===== LISTA DE CANCIONES ===== */
+    .playlist {
+      max-width: 700px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+    }
+
+    .playlist h3 {
+      font-size: 1.2rem;
+      color: var(--rojo);
+      margin-bottom: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .song-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .song-item {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.8rem 1rem;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 8px;
+      color: var(--texto);
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .song-item:hover {
+      background: rgba(229, 9, 20, 0.15);
+      border-color: var(--rojo);
+    }
+
+    .song-item.playing {
+      background: var(--rojo);
+      color: white;
+    }
+
+    .song-num {
+      font-size: 0.8rem;
+      color: var(--muted);
+      min-width: 20px;
+    }
+
+    .song-title { font-weight: 600; flex: 1; }
+    .song-artist { color: var(--muted); font-size: 0.85rem; }
+
+    /* ===== FOOTER ===== */
+    footer {
+      margin-top: auto;
+      padding: 2rem;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.8rem;
+      border-top: 1px solid rgba(255,255,255,0.05);
+    }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 700px) {
+      .disk-container { width: 220px; height: 220px; }
+      .disk-cover { width: 170px; height: 170px; font-size: 3.5rem; }
+      .np-title { font-size: 1.6rem; }
+      #song-lyric { font-size: 1.8rem; }
+      .season-counter { gap: 1.5rem; }
+      .counter-item { min-width: 70px; padding: 0.8rem 1rem; }
+      .counter-value { font-size: 1.6rem; }
+      .btn-icon { font-size: 3.5rem; }
+      .btn-text { font-size: 1.5rem; }
+    }
+
+    /* ===== ANIMACIONES POR CANCIÓN ===== */
+    .anim-ranma {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 5;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .ranma-char {
+      position: absolute;
+      font-size: 6rem;
+      font-weight: 900;
+      opacity: 0.15;
+      animation: ranmaFloat 6s ease-in-out infinite;
+    }
+
+    @keyframes ranmaFloat {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      50% { transform: translateY(-40px) rotate(5deg); }
+    }
+
+    .ranma-yellow { color: #ffd700; top: 15%; left: 10%; animation-delay: 0s; }
+    .ranma-blue { color: #0066ff; top: 20%; left: 80%; animation-delay: 1s; }
+    .ranma-red { color: #ff0000; bottom: 20%; left: 40%; animation-delay: 2s; }
+    .ranma-pink { color: #ff69b4; bottom: 15%; left: 10%; animation-delay: 3s; }
+    .ranma-green { color: #00ff00; top: 60%; left: 70%; animation-delay: 4s; }
+
+    .anim-circus {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 5;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .circus-ball {
+      position: absolute;
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      opacity: 0.2;
+      animation: circusBounce 3s ease-in-out infinite;
+    }
+
+    @keyframes circusBounce {
+      0%, 100% { transform: translateY(0) scale(1); }
+      50% { transform: translateY(-60px) scale(1.2); }
+    }
+
+    .anim-fire {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 5;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .fire-drop {
+      position: absolute;
+      width: 6px; height: 12px;
+      background: linear-gradient(to bottom, #ff4500, #ff0000);
+      border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+      opacity: 0.6;
+      animation: fireFall 2s linear infinite;
+    }
+
+    @keyframes fireFall {
+      0% { transform: translateY(-100px); opacity: 0.8; }
+      100% { transform: translateY(100vh); opacity: 0; }
+    }
+
+    .anim-digital {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 5;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .digital-glitch {
+      position: absolute;
+      font-family: monospace;
+      font-weight: 900;
+      font-size: 3rem;
+      color: var(--azul);
+      opacity: 0.15;
+      animation: glitch 2s infinite;
+    }
+
+    @keyframes glitch {
+      0%, 100% { transform: translate(0,0); opacity: 0.15; }
+      20% { transform: translate(-5px, 5px); opacity: 0.3; }
+      40% { transform: translate(5px, -5px); opacity: 0.1; }
+      60% { transform: translate(-3px, 3px); opacity: 0.25; }
+      80% { transform: translate(3px, -3px); opacity: 0.15; }
+    }
+
+    /* Ocultar contenedores de animación por defecto */
+    .anim-container { display: none; }
+  </style>
 </head>
 <body>
 
-  <!-- Canvas de fondo animado -->
-  <canvas id="bgCanvas" class="bg-canvas"></canvas>
+  <canvas id="bgCanvas"></canvas>
 
-  <!-- Overlay de letra grande -->
-  <div id="lyric-overlay" class="lyric-overlay">
-    <div id="lyric-text" class="lyric-text"></div>
-  </div>
+  <!-- Fondo de letra grande -->
+  <div id="bg-lyric"></div>
 
   <!-- Header -->
-  <header class="radio-header">
+  <header>
     <div class="logo">▶️ CANAL<span>STREAM</span></div>
-    <div class="live-status">
-      <div class="live-dot"></div>
+    <div class="live">
+      <div class="dot"></div>
       <span>EN VIVO · 24/7</span>
     </div>
-    <div class="freq">98.7 FM</div>
   </header>
 
-  <!-- Reproductor principal (sin contador mezclado) -->
+  <!-- Reproductor -->
   <main class="radio-player">
 
     <!-- Botón grande de reproducción -->
     <div id="btn-play-overlay" class="btn-play-overlay">
-      <div class="btn-play-content">
-        <div class="btn-play-icon">▶️</div>
-        <div class="btn-play-text">REPRODUCIR RADIO</div>
-        <div class="btn-play-sub">Haz clic para iniciar la transmisión en vivo</div>
+      <div class="btn-content">
+        <div class="btn-icon">▶️</div>
+        <div class="btn-text">REPRODUCIR RADIO</div>
+        <div class="btn-sub">Haz clic para iniciar la transmisión</div>
       </div>
-    </div>
+    </main>
 
-    <div class="visualizer" id="visualizer"></div>
+    <div class="disk-container" id="disk">
+      <div class="disk-cover" id="disk-cover">?</div>
+      <div class="disk-ring"></div>
+    </div>
 
     <div class="now-playing">
-      <div class="np-disk" id="np-disk">
-        <div class="disk-cover" id="disk-cover">?</div>
-        <div class="disk-spin"></div>
-      </div>
-
-      <div class="np-info">
-        <div class="np-label">AHORA SUNANDO</div>
-        <div class="np-title" id="np-title">Canal Stream Radio</div>
-        <div class="np-artist" id="np-artist">Locutor en vivo</div>
-      </div>
+      <div class="np-label">AHORA SUNANDO</div>
+      <div class="np-title" id="np-title">Canal Stream Radio</div>
+      <div class="np-artist" id="np-artist">Locutor en vivo</div>
     </div>
 
-    <!-- Letra central -->
-    <div class="lyric-container">
-      <div id="song-lyric" class="song-lyric">Pulsa REPRODUCIR para iniciar</div>
+    <!-- Letra central grande -->
+    <div class="lyric-section">
+      <div id="song-lyric">Pulsa REPRODUCIR para iniciar</div>
     </div>
 
-    <!-- Controles mínimos -->
-    <div class="radio-controls">
-      <div class="progress-container">
-        <div class="progress-bg"></div>
-        <div class="progress-fill" id="progress-fill"></div>
-      </div>
-      <div class="time-display">
-        <span id="time-current">0:00</span>
-        <span id="time-duration">0:00</span>
-      </div>
+    <!-- Progreso -->
+    <div class="progress-section">
+      <div class="progress-bg"><div class="progress-fill" id="progress"></div></div>
+    </div>
+    <div class="times">
+      <span id="time-current">0:00</span>
+      <span id="time-duration">0:00</span>
     </div>
 
-    <!-- Mensaje del locutor -->
+    <!-- Locutor -->
     <div class="locutor-box">
       <div class="locutor-label">🎙️ Locutor:</div>
       <div id="locutor-text">Canal Stream Radio está lista</div>
     </div>
+
+    <!-- Lista de canciones -->
+    <div class="playlist">
+      <h3>🎵 Canciones disponibles</h3>
+      <div class="song-list" id="song-list"></div>
+    </div>
+
   </main>
 
-  <!-- Eventos y contador independiente (separado de la radio) -->
-  <section class="events-section">
-    <div class="events-header">
+  <!-- Contenedores de animación por canción -->
+  <div class="anim-container" id="anim-ranma">
+    <div class="ranma-char ranma-yellow">♂️</div>
+    <div class="ranma-char ranma-blue">♀️</div>
+    <div class="ranma-char ranma-red">🥋</div>
+    <div class="ranma-char ranma-pink">💕</div>
+    <div class="ranma-char ranma-green">🐷</div>
+  </div>
+  <div class="anim-container" id="anim-circus">
+    <div class="circus-ball" style="background:#e50914; top:10%; left:15%; animation-delay:0s;"></div>
+    <div class="circus-ball" style="background:#00f2ff; top:20%; left:35%; animation-delay:0.5s;"></div>
+    <div class="circus-ball" style="background:#ffd700; top:15%; left:55%; animation-delay:1s;"></div>
+    <div class="circus-ball" style="background:#ff00ff; top:25%; left:75%; animation-delay:1.5s;"></div>
+    <div class="circus-ball" style="background:#00ff00; top:30%; left:5%; animation-delay:2s;"></div>
+    <div class="circus-ball" style="background:#ff4500; top:35%; left:25%; animation-delay:2.5s;"></div>
+    <div class="circus-ball" style="background:#e50914; top:40%; left:45%; animation-delay:3s;"></div>
+    <div class="circus-ball" style="background:#00f2ff; top:45%; left:65%; animation-delay:3.5s;"></div>
+  </div>
+  <div class="anim-container" id="anim-fire">
+    <div class="fire-drop" style="left:5%; animation-delay:0s;"></div>
+    <div class="fire-drop" style="left:15%; animation-delay:0.3s;"></div>
+    <div class="fire-drop" style="left:25%; animation-delay:0.6s;"></div>
+    <div class="fire-drop" style="left:35%; animation-delay:0.9s;"></div>
+    <div class="fire-drop" style="left:45%; animation-delay:1.2s;"></div>
+    <div class="fire-drop" style="left:55%; animation-delay:1.5s;"></div>
+    <div class="fire-drop" style="left:65%; animation-delay:1.8s;"></div>
+    <div class="fire-drop" style="left:75%; animation-delay:2.1s;"></div>
+    <div class="fire-drop" style="left:85%; animation-delay:2.4s;"></div>
+    <div class="fire-drop" style="left:90%; animation-delay:2.7s;"></div>
+  </div>
+  <div class="anim-container" id="anim-digital">
+    <div class="digital-glitch" style="top:20%; left:10%; animation-delay:0s;">0101</div>
+    <div class="digital-glitch" style="top:30%; left:80%; animation-delay:0.5s;">1010</div>
+    <div class="digital-glitch" style="top:40%; left:15%; animation-delay:1s;">0011</div>
+    <div class="digital-glitch" style="top:50%; left:70%; animation-delay:1.5s;">1100</div>
+    <div class="digital-glitch" style="top:60%; left:5%; animation-delay:2s;">1001</div>
+    <div class="digital-glitch" style="top:70%; left:85%; animation-delay:2.5s;">0110</div>
+  </div>
+
+  <!-- Contador temporada ABAJO -->
+  <section class="season-section">
+    <div class="season-header">
       <h2>📅 Temporada Actual</h2>
-      <div class="season-counter" id="season-counter">
-        <div class="counter-item">
-          <div class="counter-value" id="counter-days">00</div>
-          <div class="counter-label">DÍAS</div>
-        </div>
-        <div class="counter-item">
-          <div class="counter-value" id="counter-hours">00</div>
-          <div class="counter-label">HORAS</div>
-        </div>
-        <div class="counter-item">
-          <div class="counter-value" id="counter-minutes">00</div>
-          <div class="counter-label">MINUTOS</div>
-        </div>
-        <div class="counter-item">
-          <div class="counter-value" id="counter-seconds">00</div>
-          <div class="counter-label">SEGUNDOS</div>
-        </div>
-      </div>
-      <div class="season-status" id="season-status">Calculando tiempo restante...</div>
     </div>
-    <div id="lista-eventos" class="events-list"></div>
+    <div class="season-counter">
+      <div class="counter-item">
+        <div class="counter-value" id="counter-days">00</div>
+        <div class="counter-label">DÍAS</div>
+      </div>
+      <div class="counter-item">
+        <div class="counter-value" id="counter-hours">00</div>
+        <div class="counter-label">HORAS</div>
+      </div>
+      <div class="counter-item">
+        <div class="counter-value" id="counter-minutes">00</div>
+        <div class="counter-label">MINUTOS</div>
+      </div>
+      <div class="counter-item">
+        <div class="counter-value" id="counter-seconds">00</div>
+        <div class="counter-label">SEGUNDOS</div>
+      </div>
+    </div>
+    <div class="season-status" id="season-status">Calculando tiempo restante...</div>
   </section>
 
-  <footer class="radio-footer">
-    <p>Canal Stream Radio · 24/7 · Autoplay continuo · Sube solo contenido que tengas derechos de compartir</p>
+  <footer>
+    <p>Canal Stream Radio · Escucha tus canciones · 24/7</p>
   </footer>
 
-  <script src="app.js"></script>
+  <script>
+    // ===== DATOS =====
+    const API = '';
+    let songs = [];
+    let shuffledOrder = [];
+    let currentIndex = 0;
+    let audio = new Audio();
+    let isPlaying = false;
+
+    // ===== CARGAR CANCIONES =====
+    async function loadSongs() {
+      try {
+        const res = await fetch(API + '/api/musica');
+        songs = await res.json();
+        renderPlaylist();
+        if (songs.length > 0) {
+          shuffledOrder = [...songs].sort(() => Math.random() - 0.5);
+          currentIndex = 0;
+        }
+      } catch (e) {
+        console.error('Error cargando canciones:', e);
+      }
+    }
+
+    // ===== RENDER PLAYLIST =====
+    function renderPlaylist() {
+      const list = document.getElementById('song-list');
+      list.innerHTML = '';
+      songs.forEach((s, i) => {
+        const div = document.createElement('div');
+        div.className = 'song-item';
+        div.innerHTML = `
+          <div class="song-num">${i+1}</div>
+          <div class="song-title">${s.titulo}</div>
+          <div class="song-artist">${s.artista}</div>
+        `;
+        div.onclick = () => {
+          currentIndex = songs.indexOf(s);
+          playSong(currentIndex);
+        };
+        list.appendChild(div);
+      });
+    }
+
+    function updatePlaylistHighlight() {
+      document.querySelectorAll('.song-item').forEach((el, i) => {
+        el.classList.remove('playing');
+      });
+      if (shuffledOrder[currentIndex]) {
+        const song = shuffledOrder[currentIndex];
+        const idx = songs.indexOf(song);
+        if (idx >= 0) {
+          document.querySelectorAll('.song-item')[idx].classList.add('playing');
+        }
+      }
+    }
+
+    // ===== REPRODUCCIÓN =====
+    function startRadio() {
+      ensureAudio();
+      if (songs.length === 0) return;
+      playSong(currentIndex);
+      isPlaying = true;
+
+      const btn = document.getElementById('btn-play-overlay');
+      if (btn && btn.parentNode) {
+        btn.style.opacity = '0';
+        setTimeout(() => btn.parentNode.removeChild(btn), 600);
+      }
+    }
+
+    function ensureAudio() {
+      audio.crossOrigin = 'anonymous';
+      audio.preload = 'auto';
+      audio.muted = false;
+      audio.volume = 1.0;
+
+      audio.oncanplay = () => console.log('Audio puede reproducirse');
+      audio.onerror = (e) => {
+        console.error('Error de audio:', e);
+        document.getElementById('song-lyric').textContent = 'Error. Pasando a la siguiente...';
+        setTimeout(() => nextSong(), 2000);
+      };
+      audio.onended = () => {
+        document.getElementById('disk').classList.remove('spinning');
+        nextSong();
+      };
+      audio.ontimeupdate = () => {
+        const pct = audio.duration ? (audio.currentTime / audio.duration) * 100 : 0;
+        document.getElementById('progress').style.width = pct + '%';
+        document.getElementById('time-current').textContent = formatTime(audio.currentTime);
+        document.getElementById('time-duration').textContent = formatTime(audio.duration);
+      };
+    }
+
+    function playSong(index) {
+      if (songs.length === 0) return;
+      if (index < 0 || index >= shuffledOrder.length) {
+        shuffledOrder = [...songs].sort(() => Math.random() - 0.5);
+        index = 0;
+      }
+      currentIndex = index;
+
+      const song = shuffledOrder[currentIndex];
+      console.log('Reproduciendo:', song.titulo);
+
+      document.getElementById('np-title').textContent = song.titulo || 'Canal Stream Radio';
+      document.getElementById('np-artist').textContent = song.artista || 'Locutor en vivo';
+      document.getElementById('disk-cover').textContent = (song.titulo || '?').charAt(0).toUpperCase();
+      document.getElementById('bg-lyric').textContent = (song.titulo || '').toUpperCase();
+      document.getElementById('song-lyric').textContent = 'Cargando canción...';
+
+      const disk = document.getElementById('disk');
+      disk.classList.add('spinning');
+
+      updatePlaylistHighlight();
+      setAnimation(song.titulo);
+
+      speak('Nueva canción en Canal Stream Radio');
+
+      const msgs = [
+        'Disfruta de esta transmisión',
+        'La mejor música para tu momento',
+        'Sigue sintonizado, viene lo mejor',
+        'Canal Stream Radio, siempre contigo',
+        'Déjate llevar por el sonido',
+        'Tu radio, tu compañía'
+      ];
+      const r = msgs[Math.floor(Math.random() * msgs.length)];
+      document.getElementById('locutor-text').textContent = r;
+      setTimeout(() => speak(r), 1000);
+
+      audio.src = song.audio_url;
+      audio.muted = false;
+      audio.volume = 1.0;
+
+      const p = audio.play();
+      if (p !== undefined) {
+        p.catch(err => {
+          console.error('Error reproduciendo:', err);
+          document.getElementById('song-lyric').textContent = 'Error. Haz clic otra vez.';
+        });
+      }
+    }
+
+    function nextSong() {
+      speak('Siguiente canción en Canal Stream Radio');
+      playSong(currentIndex + 1);
+    }
+
+    function formatTime(sec) {
+      if (isNaN(sec)) return '0:00';
+      const m = Math.floor(sec / 60);
+      const s = Math.floor(sec % 60).toString().padStart(2, '0');
+      return `${m}:${s}`;
+    }
+
+    // ===== ANIMACIONES POR CANCIÓN =====
+    function setAnimation(title) {
+      const containers = document.querySelectorAll('.anim-container');
+      containers.forEach(c => c.style.display = 'none');
+
+      const t = (title || '').toLowerCase();
+
+      if (t.includes('mitad y mitad') || t.includes('mitad')) {
+        // Ranma 1/2 - mitad y mitad
+        const c = document.getElementById('anim-ranma');
+        c.style.display = 'block';
+      } else if (t.includes('circo') || t.includes('digital')) {
+        const c = document.getElementById('anim-digital');
+        c.style.display = 'block';
+      } else if (t.includes('fuego') || t.includes('montaña')) {
+        const c = document.getElementById('anim-fire');
+        c.style.display = 'block';
+      } else {
+        const c = document.getElementById('anim-circus');
+        c.style.display = 'block';
+      }
+    }
+
+    // ===== LOCUTOR =====
+    let synth = window.speechSynthesis;
+    let voices = [];
+    let currentUtterance = null;
+
+    function speak(text) {
+      if (!synth) return;
+      if (currentUtterance) synth.cancel();
+      currentUtterance = new SpeechSynthesisUtterance(text);
+      currentUtterance.lang = 'es-ES';
+      currentUtterance.rate = 1.0;
+      currentUtterance.volume = 0.7;
+      if (voices.length > 0) {
+        const ev = voices.find(v => v.lang.startsWith('es'));
+        if (ev) currentUtterance.voice = ev;
+      }
+      synth.speak(currentUtterance);
+    }
+
+    function loadVoices() {
+      voices = synth.getVoices();
+    }
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+    loadVoices();
+
+    // ===== CONTADOR TEMPORADA (independiente) =====
+    const SEASON_END = new Date();
+    SEASON_END.setDate(SEASON_END.getDate() + 30);
+
+    function updateSeasonCounter() {
+      const now = new Date().getTime();
+      const diff = SEASON_END.getTime() - now;
+
+      if (diff <= 0) {
+        document.getElementById('season-status').textContent = '¡La temporada ha terminado!';
+        ['counter-days','counter-hours','counter-minutes','counter-seconds'].forEach(id => {
+          document.getElementById(id).textContent = '00';
+        });
+        return;
+      }
+
+      const d = Math.floor(diff / (1000*60*60*24));
+      const h = Math.floor((diff % (1000*60*60*24)) / (1000*60*60));
+      const m = Math.floor((diff % (1000*60*60)) / (1000*60));
+      const s = Math.floor((diff % (1000*60)) / 1000);
+
+      document.getElementById('counter-days').textContent = String(d).padStart(2,'0');
+      document.getElementById('counter-hours').textContent = String(h).padStart(2,'0');
+      document.getElementById('counter-minutes').textContent = String(m).padStart(2,'0');
+      document.getElementById('counter-seconds').textContent = String(s).padStart(2,'0');
+    }
+
+    setInterval(updateSeasonCounter, 1000);
+    updateSeasonCounter();
+
+    // ===== CANVAS FONDO =====
+    function initCanvas() {
+      const canvas = document.getElementById('bgCanvas');
+      const ctx = canvas.getContext('2d');
+      let w, h, dots = [];
+
+      function resize() {
+        w = canvas.width = window.innerWidth;
+        h = canvas.height = window.innerHeight;
+        dots = Array.from({length: 50}, () => ({
+          x: Math.random() * w,
+          y: Math.random() * h,
+          vx: (Math.random() - 0.5) * 1,
+          vy: (Math.random() - 0.5) * 1,
+          r: Math.random() * 2 + 1
+        }));
+      }
+      window.addEventListener('resize', resize);
+      resize();
+
+      function animate() {
+        ctx.clearRect(0, 0, w, h);
+        ctx.fillStyle = 'rgba(229, 9, 20, 0.15)';
+        dots.forEach(d => {
+          d.x += d.vx; d.y += d.vy;
+          if (d.x < 0 || d.x > w) d.vx *= -1;
+          if (d.y < 0 || d.y > h) d.vy *= -1;
+          ctx.beginPath();
+          ctx.arc(d.x, d.y, d.r, 0, Math.PI*2);
+          ctx.fill();
+        });
+        requestAnimationFrame(animate);
+      }
+      animate();
+    }
+    initCanvas();
+
+    // ===== INICIO =====
+    loadSongs();
+
+    document.getElementById('btn-play-overlay').addEventListener('click', startRadio);
+  </script>
 </body>
 </html>
