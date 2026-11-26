@@ -1,14 +1,135 @@
 const API = '';
 
-// ==================== RADIO ====================
+// ==================== ESTADO ====================
 let songs = [];
 let shuffledOrder = [];
 let currentIndex = 0;
 let audio = new Audio();
-let audioStarted = false;
+let audioCtx = null;
+let isPlaying = false;
 let synth = window.speechSynthesis;
 let voices = [];
 let currentUtterance = null;
+
+// ==================== FUNCIONES DE AUDIO ====================
+function ensureAudioContext() {
+  if (!audioCtx) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (AC) {
+      audioCtx = new AC();
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+  }
+}
+
+function initAudio() {
+  audio.crossOrigin = 'anonymous';
+  audio.preload = 'auto';
+  audio.muted = false;
+  audio.volume = 1.0;
+
+  audio.oncanplay = () => {
+    console.log('Audio puede reproducirse');
+  };
+
+  audio.onerror = (e) => {
+    console.error('Error de audio:', e);
+    const el = document.getElementById('song-lyric');
+    if (el) el.textContent = 'Error cargando canción. Pasando a la siguiente...';
+    setTimeout(() => nextSong(), 2000);
+  };
+
+  audio.onended = () => {
+    console.log('Canción terminada, siguiente...');
+    const disk = document.getElementById('np-disk');
+    if (disk) disk.classList.remove('spinning');
+    speak('Siguiente canción en Canal Stream Radio');
+    nextSong();
+  };
+
+  audio.ontimeupdate = () => {
+    const pct = audio.duration ? (audio.currentTime / audio.duration) * 100 : 0;
+    const fill = document.getElementById('progress-fill');
+    if (fill) fill.style.width = pct + '%';
+    const cur = document.getElementById('time-current');
+    const dur = document.getElementById('time-duration');
+    if (cur) cur.textContent = formatTime(audio.currentTime);
+    if (dur) dur.textContent = formatTime(audio.duration);
+    updateLyric(audio.currentTime);
+  };
+}
+
+function playSong(index) {
+  if (songs.length === 0) {
+    document.getElementById('song-lyric').textContent = 'No hay canciones disponibles';
+    return;
+  }
+
+  if (index < 0 || index >= shuffledOrder.length) {
+    shuffledOrder = [...songs].sort(() => Math.random() - 0.5);
+    index = 0;
+  }
+  currentIndex = index;
+
+  const song = shuffledOrder[currentIndex];
+  console.log('Reproduciendo:', song.titulo, song.audio_url);
+
+  // Actualizar UI
+  document.getElementById('np-title').textContent = song.titulo || 'Canal Stream Radio';
+  document.getElementById('np-artist').textContent = song.artista || 'Locutor en vivo';
+  document.getElementById('disk-cover').textContent = (song.titulo || '?').charAt(0).toUpperCase();
+  document.getElementById('lyric-text').textContent = (song.titulo || '').toUpperCase();
+  document.getElementById('song-lyric').textContent = 'Cargando canción...';
+
+  const disk = document.getElementById('np-disk');
+  if (disk) disk.classList.add('spinning');
+
+  // Locutor
+  speak('Nueva canción en Canal Stream Radio');
+
+  const locutorMsgs = [
+    'Disfruta de esta transmisión',
+    'La mejor música para tu momento',
+    'Sigue sintonizado, viene lo mejor',
+    'Canal Stream Radio, siempre contigo',
+    'Déjate llevar por el sonido',
+    'Tu radio, tu compañía'
+  ];
+  const randomMsg = locutorMsgs[Math.floor(Math.random() * locutorMsgs.length)];
+  const locutorEl = document.getElementById('locutor-text');
+  if (locutorEl) locutorEl.textContent = randomMsg;
+  setTimeout(() => speak(randomMsg), 1000);
+
+  // Cargar y reproducir audio
+  audio.src = song.audio_url;
+  audio.muted = false;
+  audio.volume = 1.0;
+
+  const playPromise = audio.play();
+  if (playPromise !== undefined) {
+    playPromise.catch(err => {
+      console.error('Error al reproducir:', err);
+      document.getElementById('song-lyric').textContent = 'Error de reproducción. Intenta hacer clic otra vez.';
+    });
+  }
+}
+
+function nextSong() {
+  playSong(currentIndex + 1);
+}
+
+function formatTime(sec) {
+  if (isNaN(sec)) return '0:00';
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60).toString().padStart(2, '0');
+  return `${m}:${s}`;
+}
+
+// ==================== LETRAS ====================
+let lyrics = [];
+let lyricIdx = 0;
 
 function generateLyrics(title, artist) {
   const phrases = [
@@ -26,125 +147,24 @@ function generateLyrics(title, artist) {
   return phrases.map((t, i) => ({ t: i * 8, text: t }));
 }
 
-async function loadSongs() {
-  try {
-    const res = await fetch(API + '/api/musica');
-    songs = await res.json();
-    if (songs.length > 0) {
-      shuffledOrder = [...songs].sort(() => Math.random() - 0.5);
-      currentIndex = 0;
-    }
-  } catch (e) {
-    console.error('Error cargando canciones:', e);
-  }
-}
-
-function startRadio() {
-  if (songs.length === 0) return;
-  playSong(currentIndex);
-  audioStarted = true;
-}
-
-function ocultarBotonPlay() {
-  const btn = document.getElementById('btn-play-overlay');
-  if (btn && btn.parentNode) {
-    btn.style.opacity = '0';
-    setTimeout(() => btn.parentNode.removeChild(btn), 600);
-  }
-}
-
-function playSong(index) {
-  if (index < 0 || index >= shuffledOrder.length) {
-    shuffledOrder = [...songs].sort(() => Math.random() - 0.5);
-    index = 0;
-  }
-  currentIndex = index;
-  const song = shuffledOrder[currentIndex];
-
-  document.getElementById('np-title').textContent = 'Canal Stream Radio';
-  document.getElementById('np-artist').textContent = 'Emisión en vivo';
-  document.getElementById('disk-cover').textContent = song.titulo.charAt(0).toUpperCase();
-  document.getElementById('lyric-text').textContent = song.titulo.toUpperCase();
-  document.getElementById('song-lyric').textContent = 'Iniciando transmisión...';
-
-  const disk = document.getElementById('np-disk');
-  disk.classList.add('spinning');
-
-  speak('Nueva canción en Canal Stream Radio');
-
-  const locutorMsgs = [
-    'Disfruta de esta transmisión',
-    'La mejor música para tu momento',
-    'Sigue sintonizado, viene lo mejor',
-    'Canal Stream Radio, siempre contigo',
-    'Déjate llevar por el sonido',
-    'Tu radio, tu compañía'
-  ];
-  const randomMsg = locutorMsgs[Math.floor(Math.random() * locutorMsgs.length)];
-  document.getElementById('locutor-text').textContent = randomMsg;
-  setTimeout(() => speak(randomMsg), 1000);
-
-  audio.src = song.audio_url;
-  audio.crossOrigin = 'anonymous';
-  audio.muted = false;
-
-  const playPromise = audio.play();
-  if (playPromise !== undefined) {
-    playPromise.catch(err => {
-      console.warn('Error reproduciendo:', err);
-      document.getElementById('song-lyric').textContent = 'Error de reproducción. Intenta de nuevo.';
-    });
-  }
-
-  const lyrics = generateLyrics(song.titulo, song.artista);
-  let lyricIdx = 0;
-
-  const updateLyric = () => {
-    const ct = audio.currentTime;
-    while (lyricIdx < lyrics.length && lyrics[lyricIdx].t <= ct) {
-      const el = document.getElementById('song-lyric');
+function updateLyric(currentTime) {
+  while (lyricIdx < lyrics.length && lyrics[lyricIdx].t <= currentTime) {
+    const el = document.getElementById('song-lyric');
+    if (el) {
       el.classList.add('fade');
       setTimeout(() => {
         el.textContent = lyrics[lyricIdx].text;
         el.classList.remove('fade');
       }, 400);
       document.getElementById('lyric-text').textContent = lyrics[lyricIdx].text.toUpperCase();
-      lyricIdx++;
     }
-  };
-
-  const updateProgress = () => {
-    if (audio.duration) {
-      const pct = (audio.currentTime / audio.duration) * 100 || 0;
-      document.getElementById('progress-fill').style.width = pct + '%';
-      document.getElementById('time-current').textContent = formatTime(audio.currentTime);
-      document.getElementById('time-duration').textContent = formatTime(audio.duration);
-    }
-  };
-
-  audio.ontimeupdate = () => { updateLyric(); updateProgress(); };
-
-  audio.onended = () => {
-    document.getElementById('np-disk').classList.remove('spinning');
-    speak('Siguiente canción en Canal Stream Radio');
-    playSong(currentIndex + 1);
-  };
-
-  audio.onerror = () => {
-    console.warn('Error cargando canción, pasando a la siguiente...');
-    document.getElementById('np-disk').classList.remove('spinning');
-    setTimeout(() => playSong(currentIndex + 1), 2000);
-  };
+    lyricIdx++;
+  }
 }
 
-function formatTime(sec) {
-  if (isNaN(sec)) return '0:00';
-  const m = Math.floor(sec / 60);
-  const s = Math.floor(sec % 60).toString().padStart(2, '0');
-  return `${m}:${s}`;
-}
-
+// ==================== LOCUTOR VIRTUAL ====================
 function speak(text) {
+  if (!synth) return;
   if (currentUtterance) synth.cancel();
   currentUtterance = new SpeechSynthesisUtterance(text);
   currentUtterance.lang = 'es-ES';
@@ -161,8 +181,48 @@ function loadVoices() {
   voices = synth.getVoices();
 }
 
+// ==================== CARGA DE CANCIONES ====================
+async function loadSongs() {
+  try {
+    const res = await fetch(API + '/api/musica');
+    songs = await res.json();
+    console.log('Canciones cargadas:', songs.length);
+    if (songs.length > 0) {
+      shuffledOrder = [...songs].sort(() => Math.random() - 0.5);
+      currentIndex = 0;
+    }
+  } catch (e) {
+    console.error('Error cargando canciones:', e);
+  }
+}
+
+// ==================== BOTÓN DE REPRODUCCIÓN ====================
+function startRadio() {
+  ensureAudioContext();
+  if (songs.length === 0) return;
+  playSong(currentIndex);
+  isPlaying = true;
+
+  // Ocultar botón
+  const btn = document.getElementById('btn-play-overlay');
+  if (btn && btn.parentNode) {
+    btn.style.opacity = '0';
+    setTimeout(() => btn.parentNode.removeChild(btn), 600);
+  }
+}
+
+function ocultarBotonPlay() {
+  const btn = document.getElementById('btn-play-overlay');
+  if (btn && btn.parentNode) {
+    btn.style.opacity = '0';
+    setTimeout(() => btn.parentNode.removeChild(btn), 600);
+  }
+}
+
+// ==================== VISUALIZADOR ====================
 function initVisualizer() {
   const canvas = document.getElementById('visualizer');
+  if (!canvas) return;
   const ctx = canvas.getContext('2d');
   let width, height, bars = [];
 
@@ -206,10 +266,7 @@ function initVisualizer() {
   animate();
 }
 
-window.speechSynthesis.onvoiceschanged = loadVoices;
-loadVoices();
-initVisualizer();
-
+// ==================== EVENTOS ====================
 async function cargarEventos() {
   try {
     const res = await fetch(API + '/api/eventos');
@@ -234,7 +291,7 @@ async function cargarEventos() {
   }
 }
 
-// ==================== CONTADOR (separado de la radio) ====================
+// ==================== CONTADOR TEMPORADA (independiente de la radio) ====================
 const SEASON_END = new Date();
 SEASON_END.setDate(SEASON_END.getDate() + 30);
 
@@ -243,11 +300,12 @@ function updateSeasonCounter() {
   const diff = SEASON_END.getTime() - now;
 
   if (diff <= 0) {
-    document.getElementById('season-status').textContent = '¡La temporada ha terminado!';
-    document.getElementById('counter-days').textContent = '00';
-    document.getElementById('counter-hours').textContent = '00';
-    document.getElementById('counter-minutes').textContent = '00';
-    document.getElementById('counter-seconds').textContent = '00';
+    const st = document.getElementById('season-status');
+    if (st) st.textContent = '¡La temporada ha terminado!';
+    ['counter-days','counter-hours','counter-minutes','counter-seconds'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = '00';
+    });
     return;
   }
 
@@ -256,21 +314,29 @@ function updateSeasonCounter() {
   const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
   const seconds = Math.floor((diff % (1000 * 60)) / 1000);
 
-  document.getElementById('counter-days').textContent = String(days).padStart(2, '0');
-  document.getElementById('counter-hours').textContent = String(hours).padStart(2, '0');
-  document.getElementById('counter-minutes').textContent = String(minutes).padStart(2, '0');
-  document.getElementById('counter-seconds').textContent = String(seconds).padStart(2, '0');
+  const els = {
+    'counter-days': days,
+    'counter-hours': hours,
+    'counter-minutes': minutes,
+    'counter-seconds': seconds
+  };
+  Object.entries(els).forEach(([id, val]) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = String(val).padStart(2, '0');
+  });
 }
 
 setInterval(updateSeasonCounter, 1000);
 updateSeasonCounter();
 
 // ==================== INICIALIZACIÓN ====================
+window.speechSynthesis.onvoiceschanged = loadVoices;
+loadVoices();
+initVisualizer();
+initAudio();
 loadSongs();
 cargarEventos();
 
 document.getElementById('btn-play-overlay').addEventListener('click', () => {
-  audio.muted = false;
   startRadio();
-  ocultarBotonPlay();
 });
