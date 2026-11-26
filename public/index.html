@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Canal Stream Radio</title>
+  <title>ZeroStudiosRadioSongs</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -95,6 +95,24 @@
       margin-top: 1rem;
     }
 
+    .end-btn {
+      margin-top: 1.5rem;
+      padding: 1rem 2rem;
+      background: var(--rojo);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    .end-btn:hover {
+      background: var(--rojo-oscuro);
+    }
+
     /* ===== HEADER ===== */
     header {
       position: fixed;
@@ -109,16 +127,33 @@
       border-bottom: 1px solid rgba(229, 9, 20, 0.3);
     }
 
-    .logo {
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .brand-logo {
+      width: 32px;
+      height: 32px;
+      background: var(--rojo);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+    }
+
+    .brand-name {
       font-size: 1.5rem;
       font-weight: 900;
       color: white;
       letter-spacing: -1px;
     }
 
-    .logo span { color: var(--rojo); }
+    .brand-name span { color: var(--rojo); }
 
-    .live {
+    .live-btn {
       display: flex;
       align-items: center;
       gap: 0.6rem;
@@ -129,6 +164,13 @@
       padding: 0.4rem 1rem;
       border-radius: 30px;
       border: 1px solid rgba(229, 9, 20, 0.3);
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .live-btn:hover {
+      background: rgba(229, 9, 20, 0.2);
+      border-color: var(--rojo);
     }
 
     .dot {
@@ -142,6 +184,101 @@
       0% { box-shadow: 0 0 0 0 rgba(229, 9, 20, 0.7); }
       70% { box-shadow: 0 0 0 12px rgba(229, 9, 20, 0); }
       100% { box-shadow: 0 0 0 0 rgba(229, 9, 20, 0); }
+    }
+
+    /* ===== PUZZLE MODAL ===== */
+    #puzzle-modal {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 20000;
+      background: rgba(0,0,0,0.9);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    #puzzle-modal.active { display: flex; }
+
+    .puzzle-title {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: white;
+      margin-bottom: 1.5rem;
+      text-align: center;
+    }
+
+    .puzzle-board {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      max-width: 400px;
+      background: var(--gris);
+      padding: 1rem;
+      border-radius: 12px;
+      border: 2px solid var(--rojo);
+      margin-bottom: 1.5rem;
+    }
+
+    .puzzle-piece {
+      width: 100%;
+      aspect-ratio: 1;
+      background: linear-gradient(135deg, var(--rojo-oscuro), var(--rojo));
+      border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      font-weight: 900;
+      color: white;
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.3s;
+    }
+
+    .puzzle-piece:hover {
+      background: var(--rojo);
+      transform: scale(1.05);
+    }
+
+    .puzzle-piece.correct {
+      background: #00c853;
+      border-color: #00e676;
+      cursor: default;
+    }
+
+    .puzzle-hint {
+      color: var(--muted);
+      font-size: 0.9rem;
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+
+    .puzzle-btn {
+      padding: 0.8rem 1.5rem;
+      background: var(--rojo);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      cursor: pointer;
+      opacity: 0.5;
+      pointer-events: none;
+      transition: all 0.3s;
+    }
+
+    .puzzle-btn.ready {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .puzzle-btn:hover {
+      background: var(--rojo-oscuro);
     }
 
     /* ===== REPRODUCTOR PRINCIPAL ===== */
@@ -551,6 +688,8 @@
       border-color: var(--rojo);
     }
 
+    .song-item.hidden { display: none; }
+
     .song-num {
       font-size: 0.8rem;
       color: var(--muted);
@@ -582,6 +721,7 @@
       .btn-ring { width: 240px; height: 240px; }
       .btn-core { width: 150px; height: 150px; }
       .btn-text { font-size: 1.3rem; }
+      .brand-name { font-size: 1.2rem; }
     }
 
     /* ===== ANIMACIONES POR CANCIÓN ===== */
@@ -692,11 +832,12 @@
   <!-- Pantalla final de temporada (tipo Fortnite) -->
   <div id="season-end">
     <div class="end-logo">FIN DE TEMPORADA</div>
-    <div class="end-title">Gracias por sintonizar Canal Stream Radio</div>
+    <div class="end-title">Evento de Fortnite - Temporada Noviembre a Diciembre</div>
     <div class="end-video">
       <iframe id="final-youtube" src="" frameborder="0" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
     </div>
-    <div class="end-note">La temporada ha terminado. Nos vemos en la próxima.</div>
+    <div class="end-note">La temporada ha terminado. Disfruta del evento en directo.</div>
+    <button class="end-btn" id="btn-volver-radio">Volver a la Radio</button>
   </div>
 
   <canvas id="bgCanvas"></canvas>
@@ -704,12 +845,23 @@
   <div id="bg-lyric"></div>
 
   <header>
-    <div class="logo">▶️ CANAL<span>STREAM</span></div>
-    <div class="live">
+    <div class="brand">
+      <div class="brand-logo">ZS</div>
+      <div class="brand-name">ZeroStudios<span>RadioSongs</span></div>
+    </div>
+    <div class="live-btn" id="btn-open-puzzle">
       <div class="dot"></div>
-      <span>EN VIVO · 24/7</span>
+      <span>EVENTO FORTNITE</span>
     </div>
   </header>
+
+  <!-- Puzzle Modal -->
+  <div id="puzzle-modal">
+    <div class="puzzle-title">Desbloquea el Evento</div>
+    <div class="puzzle-hint">Haz clic en las piezas en el orden correcto</div>
+    <div class="puzzle-board" id="puzzle-board"></div>
+    <button class="puzzle-btn" id="puzzle-btn">CONTINUAR AL EVENTO</button>
+  </div>
 
   <main class="radio-player">
 
@@ -731,7 +883,7 @@
 
     <div class="now-playing">
       <div class="np-label">AHORA SONANDO</div>
-      <div class="np-title" id="np-title">Canal Stream Radio</div>
+      <div class="np-title" id="np-title">ZeroStudiosRadioSongs</div>
       <div class="np-artist" id="np-artist">Locutor en vivo</div>
     </div>
 
@@ -749,11 +901,11 @@
 
     <div class="locutor-box">
       <div class="locutor-label">🎙️ Locutor:</div>
-      <div id="locutor-text">Canal Stream Radio está lista</div>
+      <div id="locutor-text">ZeroStudiosRadioSongs está lista</div>
     </div>
 
     <div class="playlist">
-      <h3>🎵 Canciones disponibles</h3>
+      <h3>🎵 ZeroStudiosSongs</h3>
       <div class="song-list" id="song-list"></div>
     </div>
 
@@ -825,102 +977,92 @@
   </section>
 
   <footer>
-    <p>Canal Stream Radio · Escucha tus canciones · 24/7</p>
+    <p>ZeroStudiosRadioSongs · Escucha tus canciones · 24/7</p>
   </footer>
 
   <script>
-    // ===== LETRAS POR CANCIÓN =====
+    // ===== ESTADO =====
+    let directTerminado = false; // Se pone true cuando termina el directo
+
+    // ===== LETRAS POR CANCIÓN (claras y entendibles) =====
     const LYRICS_MAP = {
       'circo digital (versión pomni)': [
-        { t: 0, text: 'Bienvenido al circo digital' },
-        { t: 5, text: 'Donde nada es real' },
-        { t: 10, text: 'Pomni te está mirando' },
-        { t: 15, text: '¿Puedes escapar de aquí?' },
-        { t: 20, text: 'El circo nunca se detiene' }
+        { t: 0, text: 'Bienvenidos al circo digital' },
+        { t: 4, text: 'Donde Pomni nos espera' },
+        { t: 8, text: 'La aventura acaba de empezar' },
+        { t: 12, text: 'Sin fin ni principio' }
       ],
       'circo digital (versión pomni) 2': [
         { t: 0, text: 'Otra vuelta en el circo' },
-        { t: 5, text: 'Las luces no se apagan' },
-        { t: 10, text: 'Pomni sigue bailando' },
-        { t: 15, text: 'En este mundo digital' },
-        { t: 20, text: 'Sin fin ni principio' }
+        { t: 4, text: 'Las luces nunca se apagan' },
+        { t: 8, text: 'Pomni sigue adelante' },
+        { t: 12, text: 'En este mundo digital' }
       ],
       'la puerta del circo digital - capítulo 8': [
         { t: 0, text: 'La puerta se abre' },
-        { t: 5, text: 'Al capítulo ocho' },
-        { t: 10, text: 'Lo que hay detrás' },
-        { t: 15, text: 'No te lo imaginas' },
-        { t: 20, text: 'El circo te espera' }
+        { t: 4, text: 'Capítulo ocho' },
+        { t: 8, text: 'Lo que hay detrás' },
+        { t: 12, text: 'Te está esperando' }
       ],
       'la puerta del circo digital 2 - capítulo 8': [
         { t: 0, text: 'La puerta se cierra' },
-        { t: 5, text: 'Pero hay más por ver' },
-        { t: 10, text: 'Capítulo ocho parte dos' },
-        { t: 15, text: 'El misterio continúa' },
-        { t: 20, text: 'En el circo digital' }
+        { t: 4, text: 'Pero hay más por ver' },
+        { t: 8, text: 'Capítulo ocho parte dos' },
+        { t: 12, text: 'El misterio continúa' }
       ],
       'miedo en la pista': [
         { t: 0, text: 'Miedo en la pista' },
-        { t: 5, text: 'El ritmo acelera' },
-        { t: 10, text: 'Tu corazón late fuerte' },
-        { t: 15, text: 'No mires atrás' },
-        { t: 20, text: 'Sigue corriendo' }
+        { t: 4, text: 'El ritmo acelera' },
+        { t: 8, text: 'Tu corazón late fuerte' },
+        { t: 12, text: 'Sigue corriendo' }
       ],
       'mitad y mitad 2': [
         { t: 0, text: 'Mitad y mitad' },
-        { t: 5, text: 'Ranma cambia otra vez' },
-        { t: 10, text: 'De chico a chica' },
-        { t: 15, text: 'Sin control total' },
-        { t: 20, text: 'Dos en uno' }
+        { t: 4, text: 'Ranma cambia otra vez' },
+        { t: 8, text: 'De chico a chica' },
+        { t: 12, text: 'Dos en uno' }
       ],
       'mitad y mitad': [
         { t: 0, text: 'Mitad chico' },
-        { t: 5, text: 'Mitad chica' },
-        { t: 10, text: 'Ranma Saotome' },
-        { t: 15, text: 'La maldición continúa' },
-        { t: 20, text: 'Agua caliente o fría' }
+        { t: 4, text: 'Mitad chica' },
+        { t: 8, text: 'Ranma Saotome' },
+        { t: 12, text: 'La maldición continua' }
       ],
       '¡cambio de vida!': [
-        { t: 0, text: '¡Cambio de vida!' },
-        { t: 5, text: 'Todo es diferente ahora' },
-        { t: 10, text: 'Nuevo comienzo' },
-        { t: 15, text: 'Nuevo destino' },
-        { t: 20, text: 'Nunca volverás a ser el mismo' }
+        { t: 0, text: 'Cambio de vida' },
+        { t: 4, text: 'Todo es diferente ahora' },
+        { t: 8, text: 'Nuevo comienzo' },
+        { t: 12, text: 'Nunca serás el mismo' }
       ],
       'canción del circo digital - capítulo 8': [
         { t: 0, text: 'Canta el circo digital' },
-        { t: 5, text: 'En el capítulo ocho' },
-        { t: 10, text: 'La música no para' },
-        { t: 15, text: 'Los payasos bailan' },
-        { t: 20, text: 'El show continúa' }
+        { t: 4, text: 'Capítulo ocho' },
+        { t: 8, text: 'La música no para' },
+        { t: 12, text: 'El show continúa' }
       ],
       'circo digital': [
         { t: 0, text: 'Circo digital' },
-        { t: 5, text: 'Luces de neón' },
-        { t: 10, text: 'Píxeles bailando' },
-        { t: 15, text: 'En la pantalla' },
-        { t: 20, text: 'El mundo virtual' }
+        { t: 4, text: 'Luces de neón' },
+        { t: 8, text: 'Píxeles bailando' },
+        { t: 12, text: 'El mundo virtual' }
       ],
       'circo digital full': [
         { t: 0, text: 'Circo digital completo' },
-        { t: 5, text: 'Sin cortes' },
-        { t: 10, text: 'Sin pausas' },
-        { t: 15, text: 'Solo diversión' },
-        { t: 20, text: 'Para siempre' }
+        { t: 4, text: 'Sin cortes ni pausas' },
+        { t: 8, text: 'Solo diversión' },
+        { t: 12, text: 'Para siempre' }
       ],
       'ecos del circo digital - capítulo 8': [
         { t: 0, text: 'Ecos del circo' },
-        { t: 5, text: 'Que resuenan' },
-        { t: 10, text: 'En el vacío' },
-        { t: 15, text: 'Del capítulo ocho' },
-        { t: 20, text: 'Escucha el eco' }
+        { t: 4, text: 'Que resuenan' },
+        { t: 8, text: 'En el vacío' },
+        { t: 12, text: 'Escucha el eco' }
       ],
       'montañas en fuego': [
         { t: 0, text: 'Montañas en fuego' },
-        { t: 5, text: 'Lava ardiendo' },
-        { t: 10, text: 'El calor quema' },
-        { t: 15, text: 'No hay escape' },
-        { t: 20, text: 'Solo cenizas' }
+        { t: 4, text: 'Lava ardiendo' },
+        { t: 8, text: 'El calor quema' },
+        { t: 12, text: 'Solo cenizas' }
       ]
     };
 
@@ -985,9 +1127,9 @@
     function loadLyricsForSong(title) {
       const key = (title || '').toLowerCase().trim();
       lyrics = LYRICS_MAP[key] || [
-        { t: 0, text: 'Canal Stream Radio' },
-        { t: 5, text: 'Música para tu momento' },
-        { t: 10, text: 'Sintonizados siempre' }
+        { t: 0, text: 'ZeroStudiosRadioSongs' },
+        { t: 4, text: 'Música para tu momento' },
+        { t: 8, text: 'Sintonizados siempre' }
       ];
       lyricIdx = 0;
       document.getElementById('bg-lyric').textContent = (title || '').toUpperCase();
@@ -1046,6 +1188,14 @@
 
     function playSong(index) {
       if (songs.length === 0) return;
+      if (directTerminado) {
+        // Después del directo, ocultar Montañas en Fuego
+        document.querySelectorAll('.song-item').forEach(el => {
+          if (el.querySelector('.song-title').textContent.includes('Montañas en Fuego')) {
+            el.classList.add('hidden');
+          }
+        });
+      }
       if (index < 0 || index >= shuffledOrder.length) {
         shuffledOrder = [...songs].sort(() => Math.random() - 0.5);
         index = 0;
@@ -1055,7 +1205,7 @@
       const song = shuffledOrder[currentIndex];
       console.log('Reproduciendo:', song.titulo);
 
-      document.getElementById('np-title').textContent = song.titulo || 'Canal Stream Radio';
+      document.getElementById('np-title').textContent = song.titulo || 'ZeroStudiosRadioSongs';
       document.getElementById('np-artist').textContent = song.artista || 'Locutor en vivo';
       document.getElementById('disk-cover').textContent = (song.titulo || '?').charAt(0).toUpperCase();
       document.getElementById('song-lyric').textContent = 'Cargando canción...';
@@ -1067,13 +1217,13 @@
       setAnimation(song.titulo);
       loadLyricsForSong(song.titulo);
 
-      speak('Nueva canción en Canal Stream Radio');
+      speak('Nueva canción en ZeroStudiosRadioSongs');
 
       const msgs = [
         'Disfruta de esta transmisión',
         'La mejor música para tu momento',
         'Sigue sintonizado, viene lo mejor',
-        'Canal Stream Radio, siempre contigo',
+        'ZeroStudiosRadioSongs, siempre contigo',
         'Déjate llevar por el sonido',
         'Tu radio, tu compañía'
       ];
@@ -1095,7 +1245,7 @@
     }
 
     function nextSong() {
-      speak('Siguiente canción en Canal Stream Radio');
+      speak('Siguiente canción en ZeroStudiosRadioSongs');
       playSong(currentIndex + 1);
     }
 
@@ -1180,7 +1330,7 @@
 
     function showSeasonEnd() {
       document.getElementById('season-end').classList.add('active');
-      document.getElementById('final-youtube').src = 'https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1&mute=1&controls=0&modestbranding=1&cc_load_policy=0&iv_load_policy=3';
+      document.getElementById('final-youtube').src = 'https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1&mute=0&controls=1&modestbranding=1&cc_load_policy=0&iv_load_policy=3';
       // Parar la radio
       audio.pause();
       audio.src = '';
@@ -1189,6 +1339,79 @@
 
     setInterval(updateSeasonCounter, 1000);
     updateSeasonCounter();
+
+    // ===== PUZZLE =====
+    const PUZZLE_ORDER = [1, 2, 3, 4, 5, 6, 7, 8, 9]; // Orden correcto de piezas
+    let puzzleSequence = [];
+
+    function initPuzzle() {
+      const board = document.getElementById('puzzle-board');
+      board.innerHTML = '';
+      puzzleSequence = [];
+
+      // Mezclar piezas
+      const shuffled = [...PUZZLE_ORDER].sort(() => Math.random() - 0.5);
+      shuffled.forEach(num => {
+        const piece = document.createElement('div');
+        piece.className = 'puzzle-piece';
+        piece.textContent = num;
+        piece.dataset.num = num;
+        piece.onclick = () => handlePuzzleClick(num, piece);
+        board.appendChild(piece);
+      });
+
+      document.getElementById('puzzle-btn').classList.remove('ready');
+    }
+
+    function handlePuzzleClick(num, piece) {
+      puzzleSequence.push(num);
+
+      // Verificar si va en orden correcto
+      const expected = PUZZLE_ORDER[puzzleSequence.length - 1];
+      if (num === expected) {
+        piece.classList.add('correct');
+      } else {
+        // Si se equivoca, reiniciar
+        setTimeout(() => {
+          puzzleSequence = [];
+          document.querySelectorAll('.puzzle-piece').forEach(p => p.classList.remove('correct'));
+          initPuzzle();
+        }, 800);
+        return;
+      }
+
+      // Si completó todo el puzle
+      if (puzzleSequence.length === PUZZLE_ORDER.length) {
+        document.getElementById('puzzle-btn').classList.add('ready');
+      }
+    }
+
+    // Abrir puzle
+    document.getElementById('btn-open-puzzle').addEventListener('click', () => {
+      document.getElementById('puzzle-modal').classList.add('active');
+      initPuzzle();
+    });
+
+    // Cerrar puzle y continuar al evento
+    document.getElementById('puzzle-btn').addEventListener('click', () => {
+      document.getElementById('puzzle-modal').classList.remove('active');
+      // Aquí podrías redirigir a otra página o mostrar algo
+      alert('¡Puzzle completado! Acceso al evento desbloqueado.');
+    });
+
+    // Volver a la radio desde pantalla final
+    document.getElementById('btn-volver-radio').addEventListener('click', () => {
+      document.getElementById('season-end').classList.remove('active');
+      document.getElementById('final-youtube').src = '';
+      directTerminado = true;
+      // Reiniciar radio
+      if (songs.length > 0) {
+        shuffledOrder = [...songs].sort(() => Math.random() - 0.5);
+        currentIndex = 0;
+        playSong(currentIndex);
+        isPlaying = true;
+      }
+    });
 
     // ===== CANVAS FONDO =====
     function initCanvas() {
